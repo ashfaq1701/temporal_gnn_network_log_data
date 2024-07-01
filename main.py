@@ -4,7 +4,7 @@ import os
 
 from dotenv import load_dotenv
 
-from src.preprocess import download_and_process_callgraph
+from src.preprocess_raw_files import download_and_process_callgraph
 
 
 def preprocess(start_day, start_hour, end_day, end_hour):
@@ -41,10 +41,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     match args.task:
-        case 'preprocess':
+        case 'preprocess_raw_files':
             preprocess(
                 args.start_day,
                 args.start_hour,
                 args.end_day,
                 args.end_hour
             )
+        case _:
+            raise ValueError(f'Invalid task: {args.task}')

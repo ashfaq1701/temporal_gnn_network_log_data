@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+pipenv = "*"
+install = "*"
+python-dotenv = "*"
+pandas = "*"
+numpy = "*"
+pyarrow = "*"
+fastparquet = "*"
+
+[dev-packages]
+
+[requires]
+python_version = "3.12"
+python_full_version = "3.12.0"

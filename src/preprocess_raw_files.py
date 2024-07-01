@@ -2,7 +2,7 @@ import os
 
 import pandas as pd
 
-from src.utils import download_file, if_file_exists, get_filename_from_url, extract_tar_gz
+from src.utils import download_file, if_file_exists, extract_tar_gz
 
 _base_url = 'https://aliopentrace.oss-cn-beijing.aliyuncs.com/v2022MicroservicesTraces/CallGraph'
 
@@ -22,7 +22,12 @@ def download_and_process_callgraph(file_id):
         os.path.join(download_dir, filename),
         tmp_dir
     )
-    read_and_process_file(extracted_filepath, file_id)
+
+    try:
+        read_and_process_file(extracted_filepath, file_id)
+    except Exception as e:
+        print(f"Exception processing the callgraph file: {extracted_filepath}, error: {e}")
+
     os.remove(extracted_filepath)
 
 
@@ -33,11 +38,16 @@ def read_and_process_file(extracted_filepath, file_id):
     mandatory_cols = ['timestamp', 'traceid', 'service', 'um', 'dm']
     cleaned_df = df_with_unknowns_removed.dropna(subset=mandatory_cols)
 
-    cleaned_df['timestamp'] = cleaned_df['timestamp'].astype(int)
-    cleaned_df['rt'] = pd.to_numeric(cleaned_df['rt'], errors='coerce')
+    selected_df = cleaned_df[
+        ['timestamp', 'traceid', 'service', 'um', 'uminstanceid', 'interface', 'dm', 'dminstanceid', 'rt']
+    ]
 
-    sorted_df = cleaned_df.sort_values(by='timestamp')
+    selected_df['timestamp'] = selected_df['timestamp'].astype(int)
+    selected_df['rt'] = pd.to_numeric(selected_df['rt'], errors='coerce')
+
+    sorted_df = selected_df.sort_values(by='timestamp')
 
     output_dir = os.getenv('OUTPUT_DIR')
     output_filepath = os.path.join(output_dir, f'CallGraph_{file_id}.parquet')
+
     sorted_df.to_parquet(output_filepath)

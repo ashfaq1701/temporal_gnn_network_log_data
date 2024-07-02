@@ -42,6 +42,10 @@ def read_and_process_file(extracted_filepath, file_id):
         ['timestamp', 'traceid', 'service', 'um', 'uminstanceid', 'interface', 'dm', 'dminstanceid', 'rt']
     ]
 
+    if not selected_df.iloc[0]['timestamp'].isdigit() and selected_df.iloc[0]['timestamp'].startswith('T_'):
+        selected_df = selected_df.shift(periods=1, axis=1)
+        selected_df['timestamp'] = selected_df.index
+
     selected_df['timestamp'] = selected_df['timestamp'].astype(int)
     selected_df['rt'] = pd.to_numeric(selected_df['rt'], errors='coerce')
 

@@ -12,6 +12,7 @@ pandas = "*"
 numpy = "*"
 pyarrow = "*"
 fastparquet = "*"
+retrying = "*"
 
 [dev-packages]
 

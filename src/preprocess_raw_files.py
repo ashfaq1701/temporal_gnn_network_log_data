@@ -36,7 +36,8 @@ def read_and_process_file(extracted_filepath, file_id):
     raw_df = pd.read_csv(extracted_filepath, on_bad_lines='skip')
     df_with_unknowns_removed = raw_df.replace('UNKNOWN', None)
 
-    if not df_with_unknowns_removed.iloc[0]['timestamp'].isdigit() and df_with_unknowns_removed.iloc[0]['timestamp'].startswith('T_'):
+    first_timestamp = str(df_with_unknowns_removed.iloc[0]['timestamp'])
+    if not first_timestamp.isdigit() and first_timestamp.startswith('T_'):
         df_with_unknowns_removed = df_with_unknowns_removed.shift(periods=1, axis=1)
         df_with_unknowns_removed['timestamp'] = df_with_unknowns_removed.index
 
@@ -44,7 +45,7 @@ def read_and_process_file(extracted_filepath, file_id):
     cleaned_df = df_with_unknowns_removed.dropna(subset=mandatory_cols)
 
     selected_df = cleaned_df[
-        ['timestamp', 'traceid', 'service', 'um', 'uminstanceid', 'interface', 'dm', 'dminstanceid', 'rt']
+        ['timestamp', 'traceid', 'service', 'um', 'dm', 'rt']
     ]
 
     selected_df['timestamp'] = selected_df['timestamp'].astype(int)

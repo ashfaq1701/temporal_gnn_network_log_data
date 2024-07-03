@@ -35,16 +35,17 @@ def read_and_process_file(extracted_filepath, file_id):
     print(f'Processing file {extracted_filepath}')
     raw_df = pd.read_csv(extracted_filepath, on_bad_lines='skip')
     df_with_unknowns_removed = raw_df.replace('UNKNOWN', None)
+
+    if not df_with_unknowns_removed.iloc[0]['timestamp'].isdigit() and df_with_unknowns_removed.iloc[0]['timestamp'].startswith('T_'):
+        df_with_unknowns_removed = df_with_unknowns_removed.shift(periods=1, axis=1)
+        df_with_unknowns_removed['timestamp'] = df_with_unknowns_removed.index
+
     mandatory_cols = ['timestamp', 'traceid', 'service', 'um', 'dm']
     cleaned_df = df_with_unknowns_removed.dropna(subset=mandatory_cols)
 
     selected_df = cleaned_df[
         ['timestamp', 'traceid', 'service', 'um', 'uminstanceid', 'interface', 'dm', 'dminstanceid', 'rt']
     ]
-
-    if not selected_df.iloc[0]['timestamp'].isdigit() and selected_df.iloc[0]['timestamp'].startswith('T_'):
-        selected_df = selected_df.shift(periods=1, axis=1)
-        selected_df['timestamp'] = selected_df.index
 
     selected_df['timestamp'] = selected_df['timestamp'].astype(int)
     selected_df['rt'] = pd.to_numeric(selected_df['rt'], errors='coerce')

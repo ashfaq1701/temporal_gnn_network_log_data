@@ -18,6 +18,7 @@ python-dotenv
 pytz
 requests
 retrying
+setuptools
 six
 tzdata
 urllib3

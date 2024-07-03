@@ -1,5 +1,6 @@
 certifi
 charset-normalizer
+cramjam
 distlib
 fastparquet
 filelock

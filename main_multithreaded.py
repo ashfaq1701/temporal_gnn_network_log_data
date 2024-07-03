@@ -1,4 +1,6 @@
 import argparse
+import concurrent.futures
+import os
 
 from dotenv import load_dotenv
 
@@ -14,8 +16,15 @@ def preprocess(start_day, start_hour, end_day, end_hour):
     start_file_idx = int(start_minute / 3)
     end_file_idx = int(end_minute / 3) - 1
 
-    for i in range(start_file_idx, end_file_idx):
-        download_and_process_callgraph(i)
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(download_and_process_callgraph, i) for i in range(start_file_idx, end_file_idx + 1)]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
 
 
 if __name__ == "__main__":

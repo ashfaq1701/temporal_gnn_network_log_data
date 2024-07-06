@@ -50,7 +50,7 @@ if __name__ == "__main__":
     parser.add_argument('--end_day', type=int, help='The end day.')
     parser.add_argument('--end_hour', type=int, help='The end hour.')
     parser.add_argument('--start_index', type=int, help='Index of starting file.')
-    parser.add_argument('--start_index', type=int, help='Index of ending file.')
+    parser.add_argument('--end_index', type=int, help='Index of ending file.')
 
     # Parse the command-line arguments
     args = parser.parse_args()

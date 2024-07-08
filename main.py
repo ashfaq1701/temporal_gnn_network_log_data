@@ -1,7 +1,7 @@
 import argparse
 import concurrent.futures
 import os
-
+import pickle
 from dotenv import load_dotenv
 
 from src.preprocess.aggregate_dataframe import aggregate_dataframe
@@ -41,14 +41,23 @@ def produce_per_minute_files(start_idx, end_idx):
 
 def aggregate_dataframes(start_idx, end_idx):
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    all_stats = {}
+
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         futures = [executor.submit(aggregate_dataframe, i) for i in range(start_idx, end_idx)]
 
         for future in concurrent.futures.as_completed(futures):
             try:
-                future.result()
+                file_idx, stats = future.result()
+                all_stats[file_idx] = stats
             except Exception as exc:
                 print(f"Generated an exception: {exc}")
+
+    ordered_stats = [stats for _, stats in sorted(all_stats.items())]
+    output_dir = os.getenv('STATS_DIR')
+    output_filepath = os.path.join(output_dir, f'all_stats.pickle')
+    with open(output_filepath, 'wb') as f:
+        pickle.dump(ordered_stats, f)
 
 
 if __name__ == "__main__":

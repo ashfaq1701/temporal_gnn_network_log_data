@@ -43,3 +43,9 @@ def if_file_exists(dest_path, filename):
 def extract_tar_gz(filepath, extract_to):
     with tarfile.open(filepath, "r:gz") as tar:
         tar.extractall(path=extract_to)
+
+
+def count_trimmed_values(df, col_name):
+    df[f'trimmed_{col_name}'] = df[col_name].str.strip()
+    value_counts = df[f'trimmed_{col_name}'].value_counts()
+    return value_counts.to_dict()

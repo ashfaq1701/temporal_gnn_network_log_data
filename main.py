@@ -4,8 +4,9 @@ import os
 
 from dotenv import load_dotenv
 
-from src.get_per_minute_dataframes import break_file_into_per_minute_dataframes
-from src.preprocess_raw_files import download_and_process_callgraph
+from src.preprocess.aggregate_dataframe import aggregate_dataframe
+from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
+from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 
 
 def preprocess(start_day, start_hour, end_day, end_hour):
@@ -27,11 +28,21 @@ def preprocess(start_day, start_hour, end_day, end_hour):
 
 
 def produce_per_minute_files(start_idx, end_idx):
-    load_dotenv()
-
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         futures = [executor.submit(break_file_into_per_minute_dataframes, i) for i in range(start_idx, end_idx)]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+
+def aggregate_dataframes(start_idx, end_idx):
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(aggregate_dataframe, i) for i in range(start_idx, end_idx)]
 
         for future in concurrent.futures.as_completed(futures):
             try:
@@ -70,5 +81,7 @@ if __name__ == "__main__":
                 args.start_index,
                 args.end_index
             )
+        case 'aggregate':
+            aggregate_dataframes(args.start_index, args.end_index)
         case _:
             raise ValueError(f'Invalid task: {args.task}')

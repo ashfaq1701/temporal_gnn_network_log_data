@@ -2,11 +2,13 @@ import argparse
 import concurrent.futures
 import os
 import pickle
+
 from dotenv import load_dotenv
 
-from src.preprocess.aggregate_dataframe import aggregate_dataframe
+from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
+from src.utils import get_files_in_directory_with_ext
 
 
 def preprocess(start_day, start_hour, end_day, end_hour):
@@ -41,23 +43,37 @@ def produce_per_minute_files(start_idx, end_idx):
 
 def aggregate_dataframes(start_idx, end_idx):
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
-    all_stats = {}
-
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
         futures = [executor.submit(aggregate_dataframe, i) for i in range(start_idx, end_idx)]
 
         for future in concurrent.futures.as_completed(futures):
             try:
-                file_idx, stats = future.result()
-                all_stats[file_idx] = stats
+                future.result()
             except Exception as exc:
                 print(f"Generated an exception: {exc}")
 
-    ordered_stats = [stats for _, stats in sorted(all_stats.items())]
-    output_dir = os.getenv('STATS_DIR')
-    output_filepath = os.path.join(output_dir, f'all_stats.pickle')
-    with open(output_filepath, 'wb') as f:
-        pickle.dump(ordered_stats, f)
+
+def merge_stats():
+    input_dir = os.getenv('STATS_DIR')
+    file_names = get_files_in_directory_with_ext(input_dir, '.pickle')
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+
+    all_stats = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(get_stats, filename) for filename in file_names]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                file_idx, current_stats = future.result()
+                all_stats[file_idx] = current_stats
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+        ordered_stats = [stats for _, stats in sorted(all_stats.items())]
+        output_dir = os.getenv('AGGREGATED_STATS_DIR')
+        output_filepath = os.path.join(output_dir, f'all_stats.pickle')
+        with open(output_filepath, 'wb') as f:
+            pickle.dump(ordered_stats, f)
 
 
 if __name__ == "__main__":
@@ -92,5 +108,7 @@ if __name__ == "__main__":
             )
         case 'aggregate':
             aggregate_dataframes(args.start_index, args.end_index)
+        case 'merge_stats':
+            merge_stats()
         case _:
             raise ValueError(f'Invalid task: {args.task}')

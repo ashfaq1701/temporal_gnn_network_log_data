@@ -49,3 +49,9 @@ def count_trimmed_values(df, col_name):
     df[f'trimmed_{col_name}'] = df[col_name].str.strip()
     value_counts = df[f'trimmed_{col_name}'].value_counts()
     return value_counts.to_dict()
+
+
+def get_files_in_directory_with_ext(directory, extension):
+    files = os.listdir(directory)
+    pickle_files = [file for file in files if file.endswith(extension)]
+    return pickle_files

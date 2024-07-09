@@ -45,7 +45,7 @@ def read_and_process_file(extracted_filepath, file_id):
     cleaned_df = df_with_unknowns_removed.dropna(subset=mandatory_cols)
 
     selected_df = cleaned_df[
-        ['timestamp', 'traceid', 'service', 'um', 'dm', 'rt']
+        ['timestamp', 'traceid', 'service', 'rpc_id', 'rpctype', 'um', 'dm', 'rt']
     ]
 
     selected_df['timestamp'] = selected_df['timestamp'].astype(int)

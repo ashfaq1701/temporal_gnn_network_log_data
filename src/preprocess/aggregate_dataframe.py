@@ -1,9 +1,10 @@
 import os
+import pickle
 import re
 
 import pandas as pd
-import pickle
-from src.utils import count_trimmed_values, get_files_in_directory_with_ext
+
+from src.utils import count_trimmed_values
 
 
 def aggregate_dataframe(file_idx):
@@ -15,11 +16,14 @@ def aggregate_dataframe(file_idx):
 
     upstream_counts = count_trimmed_values(df, 'um')
     downstram_counts = count_trimmed_values(df, 'dm')
+    rpctype_counts = count_trimmed_values(df, 'rpctype')
+
     df_len = len(df)
 
     stats = {
         'upstream_counts': upstream_counts,
         'downstream_counts': downstram_counts,
+        'rpctype_counts': rpctype_counts,
         'length': df_len
     }
 

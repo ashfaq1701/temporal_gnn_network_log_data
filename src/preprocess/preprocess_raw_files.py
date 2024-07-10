@@ -27,6 +27,7 @@ def download_and_process_callgraph(file_id):
         read_and_process_file(extracted_filepath, file_id)
     except Exception as e:
         print(f"Exception processing the callgraph file: {extracted_filepath}, error: {e}")
+        raise e
 
     os.remove(extracted_filepath)
 
@@ -49,6 +50,8 @@ def read_and_process_file(extracted_filepath, file_id):
     ]
 
     selected_df['timestamp'] = selected_df['timestamp'].astype(int)
+    selected_df['rpc_id'] = selected_df['rpc_id'].astype(str)
+    selected_df['rpctype'] = selected_df['rpctype'].astype(str)
     selected_df['rt'] = pd.to_numeric(selected_df['rt'], errors='coerce')
 
     sorted_df = selected_df.sort_values(by='timestamp')

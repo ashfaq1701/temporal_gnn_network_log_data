@@ -13,6 +13,8 @@ numpy = "*"
 pyarrow = "*"
 fastparquet = "*"
 retrying = "*"
+torch = "*"
+scikit-learn = "*"
 
 [dev-packages]
 

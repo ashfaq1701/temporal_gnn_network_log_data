@@ -5,8 +5,7 @@ name = "pypi"
 
 [packages]
 requests = "*"
-pipenv = "*"
-install = "*"
+matplotlib = "*"
 python-dotenv = "*"
 pandas = "*"
 numpy = "*"
@@ -15,9 +14,9 @@ fastparquet = "*"
 retrying = "*"
 torch = "*"
 scikit-learn = "*"
-jupyter = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.11"
+python_full_version = "3.11.7"

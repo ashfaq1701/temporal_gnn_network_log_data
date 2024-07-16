@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
+from src.preprocess.produce_final_format_data import produce_final_format_data
 from src.utils import get_files_in_directory_with_ext
 
 
@@ -110,5 +111,7 @@ if __name__ == "__main__":
             aggregate_dataframes(args.start_index, args.end_index)
         case 'merge_stats':
             merge_stats()
+        case 'produce_final_format_data':
+            produce_final_format_data()
         case _:
             raise ValueError(f'Invalid task: {args.task}')

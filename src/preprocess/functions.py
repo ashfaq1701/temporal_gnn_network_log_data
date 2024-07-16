@@ -49,3 +49,14 @@ def get_microservice_workload(stats, microservice):
         workloads.append(downstream_counts.get(microservice, 0))
 
     return workloads
+
+
+def get_all_microservices(stats):
+    all_downstream_nodes = set()
+    all_upstream_nodes = set()
+
+    for current_stat in stats:
+        all_downstream_nodes = all_downstream_nodes | set(current_stat['downstream_counts'].keys())
+        all_upstream_nodes = all_upstream_nodes | set(current_stat['upstream_counts'].keys())
+
+    return list(all_upstream_nodes | all_downstream_nodes)

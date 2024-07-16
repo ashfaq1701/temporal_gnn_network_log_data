@@ -44,9 +44,13 @@ def get_stats(filename):
     file_idx = int(match.group(1))
     filepath = os.path.join(os.getenv('STATS_DIR'), filename)
 
-    with open(filepath, 'rb') as f:
-        data = pickle.load(f)
+    try:
+        with open(filepath, 'rb') as f:
+            data = pickle.load(f)
 
-    print(f"Read file {filename}")
+        print(f"Read file {filename}")
+    except Exception as e:
+        raise Exception(f"Error while reading file with index {file_idx}: {str(e)}")
+
     return file_idx, data
 

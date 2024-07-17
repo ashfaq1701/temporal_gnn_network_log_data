@@ -124,16 +124,16 @@ def get_label_encoder(nodes):
 
 
 def get_nodes_one_hot_encoder(label_encoder):
-    one_hot_encoder = OneHotEncoder(sparse_output=False)
+    one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     one_hot_encoder.fit(label_encoder.classes_.reshape(-1, 1))
     return one_hot_encoder
 
 
 def get_one_hot_encoder(items):
-    one_hot_encoder = OneHotEncoder(sparse_output=False)
+    one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
     one_hot_encoder.fit([[item] for item in items])
     return one_hot_encoder
 
 
 def get_node_features(nodes, one_hot_encoder):
-    return np.array([one_hot_encoder.transform([[node]])[0] for node in nodes])
+    return one_hot_encoder.transform([[class_name] for class_name in nodes])

@@ -1,4 +1,5 @@
 import os
+import re
 import pickle
 import random
 
@@ -68,7 +69,16 @@ def get_all_rpc_types(stats):
     for current_stat in stats:
         all_rpctype_nodes = all_rpctype_nodes | set(current_stat['rpctype_counts'].keys())
 
-    return list(all_rpctype_nodes)
+    pattern = r"^\d+.*\.*$"
+    filtered_rpc_types = [s for s in all_rpctype_nodes if not re.match(pattern, s) and s != 'None']
+
+    return list(filtered_rpc_types)
 
 
+def get_all_services(stats):
+    all_services = set()
 
+    for current_stat in stats:
+        all_services = all_services | set(current_stat['service_counts'].keys())
+
+    return all_services

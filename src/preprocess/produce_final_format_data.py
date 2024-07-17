@@ -20,9 +20,11 @@ def produce_final_format_data():
         df = pd.read_parquet(filepath)
 
         transformed_df = pd.DataFrame({
-            'timestamp': df['timestamp'],
-            'um': label_encoder.transform(df['um']),
-            'dm': label_encoder.transform(df['dm']),
+            'u': label_encoder.transform(df['um']),
+            'i': label_encoder.transform(df['dm']),
+            'ts': df['timestamp'],
+            'label': 0,
+            'idx': range(running_total + 1, running_total + len(df) + 1)
         })
 
         new_index = pd.RangeIndex(start=running_total, stop=running_total + len(df))

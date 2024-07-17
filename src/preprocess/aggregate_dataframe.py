@@ -17,6 +17,7 @@ def aggregate_dataframe(file_idx):
     upstream_counts = count_trimmed_values(df, 'um')
     downstram_counts = count_trimmed_values(df, 'dm')
     rpctype_counts = count_trimmed_values(df, 'rpctype')
+    service_counts = count_trimmed_values(df, 'service')
 
     df_len = len(df)
 
@@ -24,6 +25,7 @@ def aggregate_dataframe(file_idx):
         'upstream_counts': upstream_counts,
         'downstream_counts': downstram_counts,
         'rpctype_counts': rpctype_counts,
+        'service_counts': service_counts,
         'length': df_len
     }
 

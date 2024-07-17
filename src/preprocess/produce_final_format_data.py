@@ -18,6 +18,7 @@ def produce_final_format_data():
     for idx in range(20160):
         filepath = os.path.join(input_dir, f'CallGraph_{idx}.parquet')
         df = pd.read_parquet(filepath)
+        df['rt'] = df['rt'].replace(0, None)
 
         transformed_df = pd.DataFrame({
             'u': label_encoder.transform(df['um']),

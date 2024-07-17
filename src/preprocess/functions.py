@@ -60,3 +60,15 @@ def get_all_microservices(stats):
         all_upstream_nodes = all_upstream_nodes | set(current_stat['upstream_counts'].keys())
 
     return list(all_upstream_nodes | all_downstream_nodes)
+
+
+def get_all_rpc_types(stats):
+    all_rpctype_nodes = set()
+
+    for current_stat in stats:
+        all_rpctype_nodes = all_rpctype_nodes | set(current_stat['rpctype_counts'].keys())
+
+    return list(all_rpctype_nodes)
+
+
+

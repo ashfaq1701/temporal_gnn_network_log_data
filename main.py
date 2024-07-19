@@ -57,6 +57,7 @@ def aggregate_dataframes(start_idx, end_idx):
 def merge_stats():
     input_dir = os.getenv('STATS_DIR')
     file_names = get_files_in_directory_with_ext(input_dir, '.pickle')
+    print(f'Total files: {len(file_names)}')
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
 
     all_stats = {}

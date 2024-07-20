@@ -33,7 +33,7 @@ def produce_final_format_for_file(file_idx, edge_start_idx, node_label_encoder, 
     transformed_df.to_parquet(output_filepath)
     print(f'Stored file {output_filepath}')
 
-    get_and_save_edge_features(df, file_idx, rpc_type_one_hot_encoder)
+    get_and_save_edge_features(df, file_idx, rpc_type_one_hot_encoder, edge_start_idx)
 
 
 def store_encoders(node_label_encoder, rpc_type_one_hot_encoder):
@@ -72,15 +72,22 @@ def get_encoded_service(service, service_encoder):
     return encoded_service
 
 
-def get_and_save_edge_features(df, idx, rpc_type_encoder):
+def get_and_save_edge_features(df, idx, rpc_type_encoder, edge_start_idx):
     rt_col = df[['rt']]
     one_hot_encoded_rpc_type = rpc_type_encoder.transform(df[['rpctype']])
-    new_df = np.hstack([rt_col.to_numpy(), one_hot_encoded_rpc_type])
+    merged_data_np = np.hstack([rt_col.to_numpy(), one_hot_encoded_rpc_type])
 
     edge_attrs_dir = os.getenv('EDGE_ATTRS_DIR')
     edge_attrs_file_path = os.path.join(edge_attrs_dir, f'edge_attrs_{idx}.npy')
-    np.save(edge_attrs_file_path, new_df)
+    np.save(edge_attrs_file_path, merged_data_np)
     print(f'Stored edge attributes {edge_attrs_file_path}')
+
+    new_index = pd.RangeIndex(start=edge_start_idx, stop=edge_start_idx + len(df))
+    rt_col.index = new_index
+
+    short_edge_attrs_dir = os.getenv('SHORT_EDGE_ATTRS_DIR')
+    short_edge_attrs_file_path = os.path.join(short_edge_attrs_dir, f'edge_attrs_short_{idx}.parquet')
+    rt_col.to_parquet(short_edge_attrs_file_path)
 
 
 def get_label_encoder(nodes):

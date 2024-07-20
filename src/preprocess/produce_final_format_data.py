@@ -73,8 +73,6 @@ def get_encoded_service(service, service_encoder):
 
 
 def get_and_save_edge_features(df, idx, rpc_type_encoder):
-    df['rt'].fillna(0.0, inplace=True)
-
     rt_col = df[['rt']]
     one_hot_encoded_rpc_type = rpc_type_encoder.transform(df[['rpctype']])
     new_df = np.hstack([rt_col.to_numpy(), one_hot_encoded_rpc_type])

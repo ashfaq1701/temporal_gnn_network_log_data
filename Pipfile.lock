@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "08194225f0edb0e58e365cf97fd7cfc3b512218a7da675790e7e422e78b656dc"
+            "sha256": "e4019e33409df0035391788ca487453c97814dcf2a777fed19f9f85d4b14b8f8"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -1946,7 +1946,7 @@
         },
         "tgn": {
             "git": "git+ssh://git@github.com/ashfaq1701/tgn.git",
-            "ref": "a6ebfbb6cd3f41e05be2e218d16133f18dbcaac8"
+            "ref": "30a13a722816571f2b65573be443bbc0fb600ed1"
         },
         "threadpoolctl": {
             "hashes": [

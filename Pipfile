@@ -15,7 +15,7 @@ retrying = "*"
 torch = "*"
 scikit-learn = "*"
 jupyter = "*"
-tgn = {ref = "30a13a722816571f2b65573be443bbc0fb600ed1", git = "git+ssh://git@github.com/ashfaq1701/tgn.git"}
+tgn = {ref = "0d21bd27c4d528a287650efc23336e4af56b1832", git = "git+ssh://git@github.com/ashfaq1701/tgn.git"}
 
 [dev-packages]
 

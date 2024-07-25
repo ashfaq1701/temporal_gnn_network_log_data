@@ -21,7 +21,6 @@ def produce_final_format_for_file(file_idx, edge_start_idx, node_label_encoder, 
         'u': node_label_encoder.transform(df['um']),
         'i': node_label_encoder.transform(df['dm']),
         'ts': df['timestamp'],
-        'label': 0,
         'idx': range(edge_start_idx + 1, edge_start_idx + len(df) + 1)
     })
 

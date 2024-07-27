@@ -3,6 +3,7 @@ import tarfile
 import requests
 from retrying import retry
 import os
+import numpy as np
 from urllib.parse import urlparse
 
 
@@ -55,3 +56,20 @@ def get_files_in_directory_with_ext(directory, extension):
     files = os.listdir(directory)
     pickle_files = [file for file in files if file.endswith(extension)]
     return pickle_files
+
+
+def combine_means_and_stds(means, stds, sizes):
+    # Calculate the combined mean
+    total_size = np.sum(sizes)
+    combined_mean = np.sum(np.array(means) * np.array(sizes)) / total_size
+
+    # Calculate the combined variance
+    sum_of_squares = np.sum((np.array(sizes) - 1) * (np.array(stds) ** 2))
+    sum_of_square_of_diff = np.sum(np.array(sizes) * (np.array(means) - combined_mean) ** 2)
+    combined_variance = (sum_of_squares + sum_of_square_of_diff) / (total_size - 1)
+
+    # Calculate the combined standard deviation
+    combined_std = np.sqrt(combined_variance)
+
+    return combined_mean, combined_std
+

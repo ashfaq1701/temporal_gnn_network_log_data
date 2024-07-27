@@ -6,6 +6,7 @@ import pickle
 from dotenv import load_dotenv
 
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
+from src.preprocess.compute_time_statistics import compute_all_time_statistics
 from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_downstream_counts_object, \
     get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
@@ -172,6 +173,7 @@ if __name__ == "__main__":
     parser.add_argument('--end_hour', type=int, help='The end hour.')
     parser.add_argument('--start_index', type=int, help='Index of starting file.')
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
+    parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -194,5 +196,7 @@ if __name__ == "__main__":
             merge_stats()
         case 'produce_final_format_data':
             produce_final_format_data(args.start_index, args.end_index)
+        case 'compute_time_statistics':
+            compute_all_time_statistics(args.checkpoints)
         case _:
             raise ValueError(f'Invalid task: {args.task}')

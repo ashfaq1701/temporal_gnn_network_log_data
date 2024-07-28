@@ -21,17 +21,24 @@ def produce_final_format_for_file(file_idx, edge_start_idx, node_label_encoder, 
         'u': node_label_encoder.transform(df['um']),
         'i': node_label_encoder.transform(df['dm']),
         'ts': df['timestamp'],
-        'idx': range(edge_start_idx + 1, edge_start_idx + len(df) + 1)
+        'idx': range(edge_start_idx + 1, edge_start_idx + len(df) + 1),
+        'rt': df['rt']
     })
 
+    one_hot_encoded_rpc_type = rpc_type_one_hot_encoder.transform(df[['rpctype']])
+    one_hot_encoded_df = pd.DataFrame(one_hot_encoded_rpc_type)
+
+    new_df = pd.concat([
+        transformed_df.reset_index(drop=True),
+        one_hot_encoded_df.reset_index(drop=True)
+    ], axis=1)
+
     new_index = pd.RangeIndex(start=edge_start_idx, stop=edge_start_idx + len(df))
-    transformed_df.index = new_index
+    new_df.index = new_index
 
     output_filepath = os.path.join(output_dir, f'data_{file_idx}.parquet')
-    transformed_df.to_parquet(output_filepath)
+    new_df.to_parquet(output_filepath)
     print(f'Stored file {output_filepath}')
-
-    get_and_save_edge_features(df, file_idx, rpc_type_one_hot_encoder, edge_start_idx)
 
 
 def store_encoders(node_label_encoder, rpc_type_one_hot_encoder):
@@ -68,23 +75,6 @@ def get_encoded_service(service, service_encoder):
     encoded_service = service_encoder.transform([[service]])[0]
     _encoded_services[service] = encoded_service
     return encoded_service
-
-
-def get_and_save_edge_features(df, idx, rpc_type_encoder, edge_start_idx):
-    rt_col = df[['rt']]
-    one_hot_encoded_rpc_type = rpc_type_encoder.transform(df[['rpctype']])
-    one_hot_encoded_df = pd.DataFrame(one_hot_encoded_rpc_type)
-    new_df = pd.concat([
-        rt_col.reset_index(drop=True),
-        one_hot_encoded_df.reset_index(drop=True)
-    ], axis=1)
-
-    new_index = pd.RangeIndex(start=edge_start_idx, stop=edge_start_idx + len(df))
-    new_df.index = new_index
-
-    edge_attrs_dir = os.getenv('EDGE_ATTRS_DIR')
-    edge_attrs_file_path = os.path.join(edge_attrs_dir, f'edge_attrs_{idx}.parquet')
-    new_df.to_parquet(edge_attrs_file_path)
 
 
 def get_label_encoder(nodes):

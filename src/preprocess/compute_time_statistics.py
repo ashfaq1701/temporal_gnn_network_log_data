@@ -1,67 +1,26 @@
 import os
-import pickle
-import pandas as pd
+
 import numpy as np
+import pandas as pd
 
-from src.utils import combine_means_and_stds
 
-
-def compute_all_time_statistics(checkpoints):
+def compute_time_statistics_for_file(i):
     input_dir = os.getenv('FINAL_DATA_DIR')
 
-    mean_src = []
-    std_src = []
-    mean_dst = []
-    std_dst = []
-    counts = []
+    input_filepath = os.path.join(input_dir, f'data_{i}.parquet')
+    df = pd.read_parquet(input_filepath)
+    sources = df['u'].to_numpy()
+    destinations = df['i'].to_numpy()
+    ts = df['ts'].to_numpy()
 
-    for i in range(20160):
-        input_filepath = os.path.join(input_dir, f'data_{i}.parquet')
-        df = pd.read_parquet(input_filepath)
-        sources = df['u'].to_numpy()
-        destinations = df['i'].to_numpy()
-        ts = df['ts'].to_numpy()
+    mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = compute_time_statistics(
+        sources,
+        destinations,
+        ts
+    )
 
-        mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = compute_time_statistics(
-            sources,
-            destinations,
-            ts
-        )
-
-        mean_src.append(mean_time_shift_src)
-        std_src.append(std_time_shift_src)
-        mean_dst.append(mean_time_shift_dst)
-        std_dst.append(std_time_shift_dst)
-        counts.append(len(df))
-
-        print(f'Computed statistics for {input_filepath}')
-
-    output_dir = os.getenv('METADATA_DIR')
-
-    for day in checkpoints:
-        checkpoint_minute = day * 24 * 60
-        combined_mean_src, combined_std_src = combine_means_and_stds(
-            mean_src[:checkpoint_minute],
-            std_src[:checkpoint_minute],
-            counts[:checkpoint_minute]
-        )
-        combined_mean_dst, combined_std_dst = combine_means_and_stds(
-            mean_dst[:checkpoint_minute],
-            std_dst[:checkpoint_minute],
-            counts[:checkpoint_minute]
-        )
-
-        time_stats = {
-            'mean_src': combined_mean_src,
-            'std_src': combined_std_src,
-            'mean_dst': combined_mean_dst,
-            'std_dst': combined_std_dst
-        }
-
-        output_filepath = os.path.join(output_dir, f'time_statistics_{day}')
-
-        with open(output_filepath, 'wb') as f:
-            pickle.dump(time_stats, f)
+    print(f'Computed statistics for {input_filepath}')
+    return i, mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst
 
 
 def compute_time_statistics(sources, destinations, timestamps):

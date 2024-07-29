@@ -6,7 +6,7 @@ import pickle
 from dotenv import load_dotenv
 
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
-from src.preprocess.compute_time_statistics import compute_all_time_statistics
+from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
 from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_downstream_counts_object, \
     get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
@@ -162,6 +162,55 @@ def produce_final_format_data(start_idx, end_idx):
     store_encoders(node_label_encoder, rpc_type_one_hot_encoder)
 
 
+def compute_all_time_statistics_for_files():
+    all_mean_time_shift_src = {}
+    all_std_time_shift_src = {}
+    all_mean_time_shift_dst = {}
+    all_std_time_shift_dst = {}
+
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(compute_time_statistics_for_file, i) for i in range(20160)]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                idx, mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = future.result()
+                all_mean_time_shift_src[idx] = mean_time_shift_src
+                all_std_time_shift_src[idx] = std_time_shift_src
+                all_mean_time_shift_dst[idx] = mean_time_shift_dst
+                all_std_time_shift_dst[idx] = std_time_shift_dst
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+    ordered_mean_time_shift_src = [
+        mean_time_shift_src
+        for _, mean_time_shift_src in sorted(all_mean_time_shift_src.items())
+    ]
+    ordered_std_time_shift_src = [
+        std_time_shift_src
+        for _, std_time_shift_src in sorted(all_std_time_shift_src.items())
+    ]
+    ordered_mean_time_shift_dst = [
+        mean_time_shift_dst
+        for _, mean_time_shift_dst in sorted(all_mean_time_shift_dst.items())
+    ]
+    ordered_std_time_shift_dst = [
+        std_time_shift_dst
+        for _, std_time_shift_dst in sorted(all_std_time_shift_dst.items())
+    ]
+
+    stats_for_all_files = {
+        'all_mean_time_shift_src': ordered_mean_time_shift_src,
+        'all_std_time_shift_src': ordered_std_time_shift_src,
+        'all_mean_time_shift_dst': ordered_mean_time_shift_dst,
+        'all_std_time_shift_dst': ordered_std_time_shift_dst
+    }
+
+    metadata_dir = os.getenv('METADATA_DIR')
+    with open(os.path.join(metadata_dir, 'all_time_statistics.pickle'), 'wb') as f:
+        pickle.dump(stats_for_all_files, f)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Alibaba Graph Training.")
 
@@ -197,6 +246,6 @@ if __name__ == "__main__":
         case 'produce_final_format_data':
             produce_final_format_data(args.start_index, args.end_index)
         case 'compute_time_statistics':
-            compute_all_time_statistics(args.checkpoints)
+            compute_all_time_statistics_for_files()
         case _:
             raise ValueError(f'Invalid task: {args.task}')

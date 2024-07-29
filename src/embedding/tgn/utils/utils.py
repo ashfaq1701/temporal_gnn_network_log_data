@@ -134,44 +134,28 @@ class NeighborFinder:
         all_edge_attrs = []
 
         for source_node in source_nodes:
-            source_adj = self.adj_list[source_node]
+            source_adj = self.adj_list.get(source_node, deque())
+
+            neighbors = np.zeros(n_neighbors)
+            edge_indices = np.zeros(n_neighbors)
+            timestamps = np.zeros(n_neighbors)
+            edge_attrs = np.zeros((n_neighbors, self.n_edge_attrs))
 
             if len(source_adj) > 0 and n_neighbors > 0:
                 if self.uniform:
                     indices = np.random.randint(0, len(source_adj), n_neighbors)
                     entries = [source_adj[idx] for idx in indices]
                 else:
-                    min_n_neighbors = min(n_neighbors, len(source_adj))
-                    entries = source_adj[-min_n_neighbors:]
+                    entries = source_adj[-n_neighbors:]
 
-                neighbors = np.array([entry.neighbor for entry in entries])
-                edge_indices = np.array([entry.edge_idx for entry in entries])
-                timestamps = np.array([entry.timestamp for entry in entries])
-                edge_attrs = np.array([entry.edge_attrs for entry in entries])
+                neighbors[-n_neighbors:] = np.array([entry.neighbor for entry in entries])
+                edge_indices[-n_neighbors:] = np.array([entry.edge_idx for entry in entries])
+                timestamps[-n_neighbors:] = np.array([entry.timestamp for entry in entries])
+                edge_attrs[-n_neighbors:, :] = np.array([entry.edge_attrs for entry in entries])
 
-                # Determine padding length
-                pad_length = max(0, n_neighbors - len(entries))
-
-                padded_neighbors = np.pad(neighbors, (pad_length, 0), mode='constant', constant_values=0)
-                padded_edge_indices = np.pad(edge_indices, (pad_length, 0), mode='constant', constant_values=0)
-                padded_timestamps = np.pad(timestamps, (pad_length, 0), mode='constant', constant_values=0)
-                padded_edge_attrs = np.vstack([
-                    np.full((pad_length, self.n_edge_attrs), [0] * self.n_edge_attrs),
-                    edge_attrs
-                ])
-
-                all_neighbors.append(padded_neighbors)
-                all_edge_indices.append(padded_edge_indices)
-                all_timestamps.append(padded_timestamps)
-                all_edge_attrs.append(padded_edge_attrs)
-            else:
-                all_neighbors.append(np.zeros(n_neighbors))
-                all_edge_indices.append(np.zeros(n_neighbors))
-                all_timestamps.append(np.zeros(n_neighbors))
-                all_edge_attrs.append(np.zeros(n_neighbors, self.n_edge_attrs))
+            all_neighbors.append(neighbors)
+            all_edge_indices.append(edge_indices)
+            all_timestamps.append(timestamps)
+            all_edge_attrs.append(edge_attrs)
 
         return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_attrs)
-
-
-
-

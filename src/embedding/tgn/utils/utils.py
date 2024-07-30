@@ -159,3 +159,10 @@ class NeighborFinder:
             all_edge_attrs.append(edge_attrs)
 
         return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_attrs)
+
+
+def get_node_features(source_nodes, n_nodes):
+    one_hot_array = np.zeros((len(source_nodes), n_nodes))
+    for i, node in enumerate(source_nodes):
+        one_hot_array[i, node] = 1
+    return one_hot_array

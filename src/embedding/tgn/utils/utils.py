@@ -91,35 +91,39 @@ class RandEdgeSampler(object):
 
 
 class NeighborInfo:
-    def __init__(self, node, neighbor, timestamp, edge_idx, edge_attrs):
+    def __init__(self, node, neighbor, timestamp, edge_idx, edge_features):
         self.node = node
         self.neighbor = neighbor
         self.timestamp = timestamp
         self.edge_idx = edge_idx
-        self.edge_attrs = edge_attrs
+        self.edge_features = edge_features
 
     def __lt__(self, other):
         return self.timestamp < other.timestamp
 
 
 class NeighborFinder:
-    def __init__(self, max_time_in_seconds, n_edge_attrs, uniform=False):
-        self.n_edge_attrs = n_edge_attrs
+    def __init__(self, max_time_in_seconds, n_edge_features, uniform=False):
+        self.n_edge_features = n_edge_features
         self.uniform = uniform
         self.max_time_in_milliseconds = max_time_in_seconds * 1000
         self.adj_list = {}
         self.latest_timestamp = 0
 
-    def add_interaction(self, upstream, downstream, timestamp, edge_idx, edge_attrs):
-        self.latest_timestamp = max(self.latest_timestamp, timestamp)
-        self.add_neighbor_to_node(upstream, downstream, timestamp, edge_idx, edge_attrs)
-        self.add_neighbor_to_node(downstream, upstream, timestamp, edge_idx, edge_attrs)
+    def add_interactions(self, upstreams, downstreams, timestamps, edge_idxs, edge_features):
+        for us, ds, ts, edge_idx, edge_feat in zip(upstreams, downstreams, timestamps, edge_idxs, edge_features):
+            self._add_interaction(us, ds, ts, edge_idx, edge_feat)
 
-    def add_neighbor_to_node(self, node, neighbor, timestamp, edge_idx, edge_attrs):
+    def _add_interaction(self, upstream, downstream, timestamp, edge_idx, edge_features):
+        self.latest_timestamp = max(self.latest_timestamp, timestamp)
+        self.add_neighbor_to_node(upstream, downstream, timestamp, edge_idx, edge_features)
+        self.add_neighbor_to_node(downstream, upstream, timestamp, edge_idx, edge_features)
+
+    def add_neighbor_to_node(self, node, neighbor, timestamp, edge_idx, edge_features):
         if node not in self.adj_list:
             self.adj_list[node] = deque()
 
-        neighbor_info = NeighborInfo(node, neighbor, timestamp, edge_idx, edge_attrs)
+        neighbor_info = NeighborInfo(node, neighbor, timestamp, edge_idx, edge_features)
 
         self.adj_list[node].append(neighbor_info)
 
@@ -131,7 +135,7 @@ class NeighborFinder:
         all_neighbors = []
         all_edge_indices = []
         all_timestamps = []
-        all_edge_attrs = []
+        all_edge_features = []
 
         for source_node in source_nodes:
             source_adj = self.adj_list.get(source_node, deque())
@@ -139,7 +143,7 @@ class NeighborFinder:
             neighbors = np.zeros(n_neighbors)
             edge_indices = np.zeros(n_neighbors)
             timestamps = np.zeros(n_neighbors)
-            edge_attrs = np.zeros((n_neighbors, self.n_edge_attrs))
+            edge_features = np.zeros((n_neighbors, self.n_edge_features))
 
             if len(source_adj) > 0 and n_neighbors > 0:
                 if self.uniform:
@@ -151,14 +155,14 @@ class NeighborFinder:
                 neighbors[-n_neighbors:] = np.array([entry.neighbor for entry in entries])
                 edge_indices[-n_neighbors:] = np.array([entry.edge_idx for entry in entries])
                 timestamps[-n_neighbors:] = np.array([entry.timestamp for entry in entries])
-                edge_attrs[-n_neighbors:, :] = np.array([entry.edge_attrs for entry in entries])
+                edge_features[-n_neighbors:, :] = np.array([entry.edge_features for entry in entries])
 
             all_neighbors.append(neighbors)
             all_edge_indices.append(edge_indices)
             all_timestamps.append(timestamps)
-            all_edge_attrs.append(edge_attrs)
+            all_edge_features.append(edge_features)
 
-        return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_attrs)
+        return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_features)
 
 
 def get_node_features(source_nodes, n_nodes):

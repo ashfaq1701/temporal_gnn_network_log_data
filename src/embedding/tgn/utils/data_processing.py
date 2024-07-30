@@ -6,14 +6,16 @@ import pandas as pd
 from torch.utils.data import Dataset
 
 
-class ParquetDataset(Dataset):
-    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000):
+class CombinedPandasDatasetFromDirectory(Dataset):
+    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, neighbor_finder=None):
         self.file_dir = file_dir
         self.file_paths = [
             os.path.join(file_dir, f'data_{idx}.parquet')
             for idx in range(start_file_idx, end_file_idx)
         ]
         self.batch_size = batch_size
+        self.neighbor_finder = neighbor_finder
+
         self.current_file_index = 0
         self.current_df = self._load_next_file()
         self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
@@ -40,13 +42,17 @@ class ParquetDataset(Dataset):
         start_row = file_batch_index * self.batch_size
         end_row = min(start_row + self.batch_size, len(self.current_df))
         batch_data = self.current_df.iloc[start_row:end_row]
-        return (
-            batch_data[['u']].values,
-            batch_data[['i']].values,
-            batch_data[['ts']].values,
-            batch_data[['idx']].values,
-            batch_data.iloc[:, 4:].values
-        )
+
+        upstreams = batch_data[['u']].values.flatten()
+        downstreams = batch_data[['i']].values.flatten()
+        timestamps = batch_data[['ts']].values.flatten()
+        edge_indices = batch_data[['idx']].values.flatten()
+        edge_features = batch_data.iloc[:, 4:].values
+
+        if self.neighbor_finder is not None:
+            self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
+
+        return upstreams, downstreams, timestamps, edge_indices, edge_features
 
 
 def compute_time_statistics(sources, destinations, timestamps):

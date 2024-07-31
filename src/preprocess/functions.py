@@ -41,19 +41,27 @@ def get_lengths():
     return lengths
 
 
-def get_all_call_counts(call_counts):
+def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
     all_counts = {}
 
-    for current_counts in call_counts:
+    sliced_call_counts = call_counts
+    if from_idx is not None and to_idx is not None:
+        sliced_call_counts = call_counts[from_idx:to_idx]
+    elif from_idx is not None:
+        sliced_call_counts = call_counts[from_idx:]
+    elif to_idx is not None:
+        sliced_call_counts = all_counts[:to_idx]
+
+    for current_counts in sliced_call_counts:
         for node, count in current_counts.items():
             all_counts[node] = all_counts.get(node, 0) + count
 
     return all_counts
 
 
-def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder):
-    all_upstream_counts = get_all_call_counts(upstream_counts)
-    all_downstream_counts = get_all_call_counts(downstream_counts)
+def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder, from_idx=None, to_idx=None):
+    all_upstream_counts = get_all_call_counts(upstream_counts, from_idx, to_idx)
+    all_downstream_counts = get_all_call_counts(downstream_counts, from_idx, to_idx)
 
     encoded_upstream_nodes = node_label_encoder.transform(list(all_upstream_counts.keys()))
     encoded_downstream_nodes = node_label_encoder.transform(list(all_downstream_counts.keys()))
@@ -133,3 +141,10 @@ def get_edge_feature_count():
     final_data_dir = os.getenv('FINAL_DATA_DIR')
     df = pd.read_parquet(os.path.join(final_data_dir, 'data_0.parquet'))
     return len(df.columns) - 4
+
+
+def get_node_label_encoder():
+    filepath = os.path.join(os.getenv('METADATA_DIR'), "node_label_encoder.pickle")
+    with open(filepath, 'rb') as f:
+        node_label_encoder = pickle.load(f)
+    return node_label_encoder

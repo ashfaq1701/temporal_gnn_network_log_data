@@ -1,5 +1,6 @@
-import heapq
+import itertools
 from collections import deque
+import multiprocessing as mp
 import numpy as np
 import torch
 
@@ -108,16 +109,19 @@ class NeighborFinder:
         self.uniform = uniform
         self.max_time_in_milliseconds = max_time_in_seconds * 1000
         self.adj_list = {}
+        self.adj_list_snapshot = None
         self.latest_timestamp = 0
 
     def add_interactions(self, upstreams, downstreams, timestamps, edge_idxs, edge_features):
-        for us, ds, ts, edge_idx, edge_feat in zip(upstreams, downstreams, timestamps, edge_idxs, edge_features):
-            self._add_interaction(us, ds, ts, edge_idx, edge_feat)
+        data = zip(upstreams, downstreams, timestamps, edge_idxs, edge_features)
+        for row in data:
+            self._process_interaction(row)
 
-    def _add_interaction(self, upstream, downstream, timestamp, edge_idx, edge_features):
-        self.latest_timestamp = max(self.latest_timestamp, timestamp)
-        self.add_neighbor_to_node(upstream, downstream, timestamp, edge_idx, edge_features)
-        self.add_neighbor_to_node(downstream, upstream, timestamp, edge_idx, edge_features)
+    def _process_interaction(self, interaction):
+        us, ds, ts, edge_idx, edge_feat = interaction
+        self.latest_timestamp = max(self.latest_timestamp, ts)
+        self.add_neighbor_to_node(us, ds, ts, edge_idx, edge_feat)
+        self.add_neighbor_to_node(ds, us, ts, edge_idx, edge_feat)
 
     def add_neighbor_to_node(self, node, neighbor, timestamp, edge_idx, edge_features):
         if node not in self.adj_list:
@@ -145,17 +149,19 @@ class NeighborFinder:
             timestamps = np.zeros(n_neighbors)
             edge_features = np.zeros((n_neighbors, self.n_edge_features))
 
+            derived_n_neighbors = n_neighbors
             if len(source_adj) > 0 and n_neighbors > 0:
                 if self.uniform:
                     indices = np.random.randint(0, len(source_adj), n_neighbors)
                     entries = [source_adj[idx] for idx in indices]
                 else:
-                    entries = source_adj[-n_neighbors:]
+                    derived_n_neighbors = min(n_neighbors, len(source_adj))
+                    entries = list(itertools.islice(source_adj, len(source_adj) - derived_n_neighbors, len(source_adj)))
 
-                neighbors[-n_neighbors:] = np.array([entry.neighbor for entry in entries])
-                edge_indices[-n_neighbors:] = np.array([entry.edge_idx for entry in entries])
-                timestamps[-n_neighbors:] = np.array([entry.timestamp for entry in entries])
-                edge_features[-n_neighbors:, :] = np.array([entry.edge_features for entry in entries])
+                neighbors[-derived_n_neighbors:] = np.array([entry.neighbor for entry in entries])
+                edge_indices[-derived_n_neighbors:] = np.array([entry.edge_idx for entry in entries])
+                timestamps[-derived_n_neighbors:] = np.array([entry.timestamp for entry in entries])
+                edge_features[-derived_n_neighbors:, :] = np.array([entry.edge_features for entry in entries])
 
             all_neighbors.append(neighbors)
             all_edge_indices.append(edge_indices)
@@ -163,6 +169,16 @@ class NeighborFinder:
             all_edge_features.append(edge_features)
 
         return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_features)
+
+    def reset(self):
+        self.adj_list.clear()
+
+    def snapshot(self):
+        self.adj_list_snapshot = self.adj_list.copy()
+
+    def restore(self):
+        if self.adj_list_snapshot is not None:
+            self.adj_list = self.adj_list_snapshot
 
 
 def get_node_features(source_nodes, n_nodes):

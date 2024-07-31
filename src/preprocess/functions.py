@@ -3,6 +3,8 @@ import re
 import pickle
 import random
 
+import pandas as pd
+
 
 def get_downstream_counts_object():
     filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "downstream_counts.pickle")
@@ -39,14 +41,24 @@ def get_lengths():
     return lengths
 
 
-def get_all_downstream_call_counts(downstream_counts):
-    all_downstream_counts = {}
+def get_all_call_counts(call_counts):
+    all_counts = {}
 
-    for current_downstream_counts in downstream_counts:
-        for downstream, count in current_downstream_counts.items():
-            all_downstream_counts[downstream] = all_downstream_counts.get(downstream, 0) + count
+    for current_counts in call_counts:
+        for node, count in current_counts.items():
+            all_counts[node] = all_counts.get(node, 0) + count
 
-    return all_downstream_counts
+    return all_counts
+
+
+def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder):
+    all_upstream_counts = get_all_call_counts(upstream_counts)
+    all_downstream_counts = get_all_call_counts(downstream_counts)
+
+    encoded_upstream_nodes = node_label_encoder.transform(list(all_upstream_counts.keys()))
+    encoded_downstream_nodes = node_label_encoder.transform(list(all_downstream_counts.keys()))
+
+    return encoded_upstream_nodes, encoded_downstream_nodes
 
 
 def get_downstream_probabilities(all_downstream_counts):
@@ -115,3 +127,9 @@ def get_lengths_prefix_sum(lengths):
     for idx, length in enumerate(lengths):
         prefix_sums[idx + 1] = prefix_sums[idx] + length
     return prefix_sums
+
+
+def get_edge_feature_count():
+    final_data_dir = os.getenv('FINAL_DATA_DIR')
+    df = pd.read_parquet(os.path.join(final_data_dir, 'data_0.parquet'))
+    return len(df.columns) - 4

@@ -167,6 +167,7 @@ def compute_all_time_statistics_for_files():
     all_std_time_shift_src = {}
     all_mean_time_shift_dst = {}
     all_std_time_shift_dst = {}
+    all_lengths = {}
 
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
@@ -174,11 +175,13 @@ def compute_all_time_statistics_for_files():
 
         for future in concurrent.futures.as_completed(futures):
             try:
-                idx, mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = future.result()
+                idx, mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst, df_len = \
+                    future.result()
                 all_mean_time_shift_src[idx] = mean_time_shift_src
                 all_std_time_shift_src[idx] = std_time_shift_src
                 all_mean_time_shift_dst[idx] = mean_time_shift_dst
                 all_std_time_shift_dst[idx] = std_time_shift_dst
+                all_lengths[idx] = df_len
             except Exception as exc:
                 print(f"Generated an exception: {exc}")
 
@@ -198,12 +201,14 @@ def compute_all_time_statistics_for_files():
         std_time_shift_dst
         for _, std_time_shift_dst in sorted(all_std_time_shift_dst.items())
     ]
+    ordered_lengths = [df_len for _, df_len in sorted(all_lengths.items())]
 
     stats_for_all_files = {
         'all_mean_time_shift_src': ordered_mean_time_shift_src,
         'all_std_time_shift_src': ordered_std_time_shift_src,
         'all_mean_time_shift_dst': ordered_mean_time_shift_dst,
-        'all_std_time_shift_dst': ordered_std_time_shift_dst
+        'all_std_time_shift_dst': ordered_std_time_shift_dst,
+        'all_lengths': ordered_lengths
     }
 
     metadata_dir = os.getenv('METADATA_DIR')

@@ -43,11 +43,11 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         end_row = min(start_row + self.batch_size, len(self.current_df))
         batch_data = self.current_df.iloc[start_row:end_row]
 
-        upstreams = batch_data[['u']].values.flatten()
-        downstreams = batch_data[['i']].values.flatten()
-        timestamps = batch_data[['ts']].values.flatten()
-        edge_indices = batch_data[['idx']].values.flatten()
-        edge_features = batch_data.iloc[:, 4:].values
+        upstreams = batch_data[['u']].values.flatten().astype(np.int32)
+        downstreams = batch_data[['i']].values.flatten().astype(np.int32)
+        timestamps = batch_data[['ts']].values.flatten().astype(np.int64)
+        edge_indices = batch_data[['idx']].values.flatten().astype(np.int64)
+        edge_features = batch_data.iloc[:, 4:].values.astype(np.int32)
 
         if self.neighbor_finder is not None:
             self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)

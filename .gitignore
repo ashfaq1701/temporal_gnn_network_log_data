@@ -2,6 +2,11 @@
 .DS_Store
 __pycache__/
 
+log/
+results/
+saved_checkpoints/
+saved_models/
+
 .env
 data/output_files/*
 !data/output_files/.gitkeep

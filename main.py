@@ -10,6 +10,7 @@ from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
 from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_downstream_counts_object, \
     get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types
+from src.preprocess.generate_sampled_data_statistics import generate_statistics_for_sampled_file
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 from src.preprocess.produce_final_format_data import get_label_encoder, get_one_hot_encoder, store_encoders, \
@@ -175,6 +176,50 @@ def sample_callgraph_files():
                 print(f"Generated an exception: {exc}")
 
 
+def compute_stats_for_sampled_files():
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+
+    all_u_counts = {}
+    all_i_counts = {}
+    all_lens = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(generate_statistics_for_sampled_file, i) for i in range(20160)]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                file_idx, u_counts, i_counts, df_len = future.result()
+
+                all_u_counts[file_idx] = u_counts
+                all_i_counts[file_idx] = i_counts
+                all_lens[file_idx] = df_len
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+    ordered_u_counts = [
+        u_counts
+        for _, u_counts in sorted(all_u_counts.items())
+    ]
+    ordered_i_counts = [
+        i_counts
+        for _, i_counts in sorted(all_i_counts.items())
+    ]
+    ordered_lengths = [
+        length
+        for _, length in sorted(all_lens.items())
+    ]
+
+    stats_obj = {
+        'u_counts': ordered_u_counts,
+        'i_counts': ordered_i_counts,
+        'lengths': ordered_lengths
+    }
+
+    aggregated_stats_dir = os.getenv('AGGREGATED_STATS_DIR')
+    with open(os.path.join(aggregated_stats_dir, 'stats_for_sampled_data.pickle'), 'wb') as f:
+        pickle.dump(stats_obj, f)
+
+
 def compute_all_time_statistics_for_files():
     all_mean_time_shift_src = {}
     all_std_time_shift_src = {}
@@ -242,7 +287,6 @@ if __name__ == "__main__":
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
     parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
 
-
     # TGN Arguments
     parser.add_argument('--bs', type=int, default=2000, help='Batch_size')
     parser.add_argument('--prefix', type=str, default='', help='Prefix to name the checkpoints')
@@ -287,7 +331,6 @@ if __name__ == "__main__":
     parser.add_argument('--dyrep', action='store_true',
                         help='Whether to run the dyrep model')
 
-
     # Parse the command-line arguments
     args = parser.parse_args()
 
@@ -311,6 +354,8 @@ if __name__ == "__main__":
             produce_final_format_data(args.start_index, args.end_index)
         case 'sample_data':
             sample_callgraph_files()
+        case 'compute_stats_for_sampled_data':
+            compute_stats_for_sampled_files()
         case 'compute_time_statistics':
             compute_all_time_statistics_for_files()
         case 'train_link_prediction':

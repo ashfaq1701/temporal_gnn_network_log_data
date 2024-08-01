@@ -42,8 +42,7 @@ class CombinedPandasDatasetFromDirectory(Dataset):
 
     def __getitem__(self, idx):
         file_batch_index = idx % self.num_batches_in_file
-        if idx // self.num_batches_in_file > self.current_file_index:
-            print(f'Loading next file {self.current_file_index} ...')
+        if idx // self.num_batches_in_file == self.current_file_index:
             self.current_df = self._load_next_file()
             self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
 

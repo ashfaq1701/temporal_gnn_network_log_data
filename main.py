@@ -14,6 +14,7 @@ from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 from src.preprocess.produce_final_format_data import get_label_encoder, get_one_hot_encoder, store_encoders, \
     produce_final_format_for_file
+from src.preprocess.sample_data import sample_data
 from src.utils import get_files_in_directory_with_ext
 
 
@@ -163,6 +164,17 @@ def produce_final_format_data(start_idx, end_idx):
     store_encoders(node_label_encoder, rpc_type_one_hot_encoder)
 
 
+def sample_callgraph_files():
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(sample_data, i) for i in range(20160)]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+
 def compute_all_time_statistics_for_files():
     all_mean_time_shift_src = {}
     all_std_time_shift_src = {}
@@ -297,6 +309,8 @@ if __name__ == "__main__":
             merge_stats()
         case 'produce_final_format_data':
             produce_final_format_data(args.start_index, args.end_index)
+        case 'sample_data':
+            sample_callgraph_files()
         case 'compute_time_statistics':
             compute_all_time_statistics_for_files()
         case 'train_link_prediction':

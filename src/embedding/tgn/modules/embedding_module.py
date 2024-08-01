@@ -106,10 +106,11 @@ class GraphEmbedding(EmbeddingModule):
 
             neighbors, edge_idxs, edge_times, edge_features = self.neighbor_finder.get_temporal_neighbor(
                 source_nodes,
-                timestamps,
-                n_neighbors=n_neighbors)
+                n_neighbors=n_neighbors
+            )
 
             neighbors_torch = torch.from_numpy(neighbors).long().to(self.device)
+            edge_features_torch = torch.from_numpy(edge_features).to(self.device)
 
             edge_deltas = timestamps[:, np.newaxis] - edge_times
 
@@ -132,7 +133,7 @@ class GraphEmbedding(EmbeddingModule):
                                               source_nodes_time_embedding,
                                               neighbor_embeddings,
                                               edge_time_embeddings,
-                                              edge_features,
+                                              edge_features_torch,
                                               mask)
 
             return source_embedding

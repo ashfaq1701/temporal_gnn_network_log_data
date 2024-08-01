@@ -35,7 +35,7 @@ def train_link_prediction_model(args):
 
     Path("saved_models/").mkdir(parents=True, exist_ok=True)
     Path("saved_checkpoints/").mkdir(parents=True, exist_ok=True)
-    model_save_path = f'saved_models/{args.prefix}-{args.data}.pth'
+    model_save_path = f'saved_models/{args.prefix}.pth'
     get_checkpoint_path = lambda epoch: f'saved_checkpoints/{args.prefix}-{args.data}-{epoch}.pth'
 
     ### set up logger
@@ -56,14 +56,15 @@ def train_link_prediction_model(args):
 
     data_directory = os.getenv('FINAL_DATA_DIR')
 
-    training_days = os.getenv('TRAINING_DAYS')
-    validation_days = os.getenv('VALIDATION_DAYS')
-    neighbor_buffer_duration_hours = os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS')
+    training_days = int(os.getenv('TRAINING_DAYS'))
+    validation_days = int(os.getenv('VALIDATION_DAYS'))
+    neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
 
-    train_file_start_idx, train_file_end_idx, valid_file_start_idx, valid_file_end_idx = \
+    (train_file_start_idx, train_file_end_idx), (valid_file_start_idx, valid_file_end_idx) = \
         get_training_and_validation_file_indices(training_days, validation_days)
 
     n_edge_features = get_edge_feature_count()
+    n_node_features = int(os.getenv('N_NODE_FEATURES'))
     neighbor_finder = NeighborFinder(neighbor_buffer_duration_hours * 60 * 60, n_edge_features, args.uniform)
 
     train_dataset = CombinedPandasDatasetFromDirectory(
@@ -71,7 +72,8 @@ def train_link_prediction_model(args):
         train_file_start_idx,
         train_file_end_idx,
         batch_size,
-        neighbor_finder
+        neighbor_finder,
+        logger
     )
 
     valid_dataset = CombinedPandasDatasetFromDirectory(
@@ -79,34 +81,29 @@ def train_link_prediction_model(args):
         valid_file_start_idx,
         valid_file_end_idx,
         batch_size,
-        neighbor_finder
+        neighbor_finder,
+        logger
     )
 
-    upstream_counts = get_upstream_counts_object()
-    downstream_counts = get_downstream_counts_object()
-    node_label_encoder = get_node_label_encoder()
-    n_nodes = len(node_label_encoder.classes_)
-
-    upstream_nodes_train, downstream_nodes_train = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        node_label_encoder,
-        train_file_start_idx,
-        train_file_end_idx
-    )
-    upstream_nodes_valid, downstream_nodes_valid = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        node_label_encoder,
-        valid_file_start_idx,
-        valid_file_end_idx
-    )
+    upstream_nodes_train, downstream_nodes_train, upstream_nodes_valid, downstream_nodes_valid, n_nodes = \
+        get_upstream_and_downstream_nodes(
+            train_file_start_idx,
+            train_file_end_idx,
+            valid_file_start_idx,
+            valid_file_end_idx
+        )
 
     train_rand_sampler = RandEdgeSampler(upstream_nodes_train, downstream_nodes_train)
     val_rand_sampler = RandEdgeSampler(upstream_nodes_valid, downstream_nodes_valid, seed=0)
 
     # Set device
-    device_string = 'cuda:{}'.format(gpu) if torch.cuda.is_available() else 'cpu'
+    if torch.cuda.is_available():
+        device_string = 'cuda:{}'.format(gpu)
+    elif torch.backends.mps.is_available():
+        device_string = 'mps'
+    else:
+        device_string = 'cpu'
+
     device = torch.device(device_string)
 
     # Compute time statistics
@@ -119,7 +116,7 @@ def train_link_prediction_model(args):
         Path("results/").mkdir(parents=True, exist_ok=True)
 
         # Initialize Model
-        tgn = TGN(n_node_features=n_nodes, n_nodes=n_nodes, n_edge_features=n_edge_features,
+        tgn = TGN(n_node_features=n_node_features, n_nodes=n_nodes, n_edge_features=n_edge_features,
                   neighbor_finder=neighbor_finder, device=device, n_layers=num_layer, n_heads=num_heads,
                   dropout=drop_out, use_memory=use_memory, message_dimension=message_dim, memory_dimension=memory_dim,
                   memory_update_at_start=not args.memory_update_at_end, embedding_module_type=args.embedding_module,
@@ -183,6 +180,8 @@ def train_link_prediction_model(args):
 
                 backprop_running_count += 1
                 if backprop_running_count == args.backprop_every:
+                    print(f"Backpropagating {backprop_running_count}")
+
                     backprop_running_count = 0
 
                     loss /= args.backprop_every
@@ -213,7 +212,7 @@ def train_link_prediction_model(args):
 
             val_ap, val_auc = eval_edge_prediction(model=tgn,
                                                    negative_edge_sampler=val_rand_sampler,
-                                                   data=valid_dataset,
+                                                   valid_dataset=valid_dataset,
                                                    n_neighbors=num_neighbors)
 
             val_aps.append(val_ap)
@@ -260,3 +259,27 @@ def train_link_prediction_model(args):
         logger.info('Saving TGN model')
         torch.save(tgn.state_dict(), model_save_path)
         logger.info('TGN model saved')
+
+
+def get_upstream_and_downstream_nodes(train_start_idx, train_end_idx, valid_start_idx, valid_end_idx):
+    upstream_counts = get_upstream_counts_object()
+    downstream_counts = get_downstream_counts_object()
+    node_label_encoder = get_node_label_encoder()
+    n_nodes = len(node_label_encoder.classes_)
+
+    upstream_nodes_train, downstream_nodes_train = get_encoded_nodes(
+        upstream_counts,
+        downstream_counts,
+        node_label_encoder,
+        train_start_idx,
+        train_end_idx
+    )
+    upstream_nodes_valid, downstream_nodes_valid = get_encoded_nodes(
+        upstream_counts,
+        downstream_counts,
+        node_label_encoder,
+        valid_start_idx,
+        valid_end_idx
+    )
+
+    return upstream_nodes_train, downstream_nodes_train, upstream_nodes_valid, downstream_nodes_valid, n_nodes

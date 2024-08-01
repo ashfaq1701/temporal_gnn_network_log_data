@@ -7,7 +7,9 @@ from torch.utils.data import Dataset
 
 
 class CombinedPandasDatasetFromDirectory(Dataset):
-    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, neighbor_finder=None):
+    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, neighbor_finder=None, logger=None):
+        self.logger = logger
+
         self.file_dir = file_dir
         self.file_paths = [
             os.path.join(file_dir, f'data_{idx}.parquet')
@@ -24,6 +26,11 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         if self.current_file_index >= len(self.file_paths):
             raise IndexError("No more files to load")
         file_path = self.file_paths[self.current_file_index]
+
+        #if self.logger is not None:
+            #self.logger.info(f'Loading file {file_path} in dataset')
+        print(f'Loading file {file_path} in dataset')
+
         self.current_file_index += 1
         df = pd.read_parquet(file_path)
         df['rt'] = df['rt'].fillna(df['rt'].median())
@@ -36,11 +43,13 @@ class CombinedPandasDatasetFromDirectory(Dataset):
     def __getitem__(self, idx):
         file_batch_index = idx % self.num_batches_in_file
         if idx // self.num_batches_in_file > self.current_file_index:
+            print(f'Loading next file {self.current_file_index} ...')
             self.current_df = self._load_next_file()
             self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
 
         start_row = file_batch_index * self.batch_size
         end_row = min(start_row + self.batch_size, len(self.current_df))
+        print(f"{idx} {start_row} {end_row}")
         batch_data = self.current_df.iloc[start_row:end_row]
 
         upstreams = batch_data[['u']].values.flatten().astype(np.int32)

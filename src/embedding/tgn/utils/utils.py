@@ -168,7 +168,12 @@ class NeighborFinder:
             all_timestamps.append(timestamps)
             all_edge_features.append(edge_features)
 
-        return np.array(all_neighbors), np.array(all_edge_indices), np.array(all_timestamps), np.array(all_edge_features)
+        return (
+            np.array(all_neighbors),
+            np.array(all_edge_indices),
+            np.array(all_timestamps),
+            np.array(all_edge_features).astype(np.float32)
+        )
 
     def reset(self):
         self.adj_list.clear()
@@ -181,8 +186,5 @@ class NeighborFinder:
             self.adj_list = self.adj_list_snapshot
 
 
-def get_node_features(source_nodes, n_nodes):
-    one_hot_array = np.zeros((len(source_nodes), n_nodes))
-    for i, node in enumerate(source_nodes):
-        one_hot_array[i, node] = 1
-    return one_hot_array
+def get_node_features(source_nodes, n_node_features):
+    return np.zeros((len(source_nodes), n_node_features))

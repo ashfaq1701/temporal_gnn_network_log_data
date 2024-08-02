@@ -23,7 +23,7 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
 
     def _load_next_file(self):
-        if self.current_file_index >= len(self.file_paths):
+        if self.current_file_index == len(self.file_paths):
             raise IndexError("No more files to load")
         file_path = self.file_paths[self.current_file_index]
 

@@ -41,6 +41,13 @@ def get_lengths():
     return lengths
 
 
+def get_sampled_stats():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "stats_for_sampled_data.pickle")
+    with open(filepath, 'rb') as f:
+        stats = pickle.load(f)
+    return stats
+
+
 def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
     all_counts = {}
 
@@ -59,24 +66,16 @@ def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
     return all_counts
 
 
-def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder, from_idx=None, to_idx=None):
-    all_upstream_counts = get_all_call_counts(upstream_counts, from_idx, to_idx)
-    all_downstream_counts = get_all_call_counts(downstream_counts, from_idx, to_idx)
-
-    encoded_upstream_nodes = node_label_encoder.transform(list(all_upstream_counts.keys()))
-    encoded_downstream_nodes = node_label_encoder.transform(list(all_downstream_counts.keys()))
-
-    return encoded_upstream_nodes, encoded_downstream_nodes
+def get_upstream_and_downstream_nodes(sampled_stats, from_idx=None, to_idx=None):
+    all_upstream_counts = get_all_call_counts(sampled_stats['u_counts'], from_idx, to_idx)
+    all_downstream_counts = get_all_call_counts(sampled_stats['i_counts'], from_idx, to_idx)
+    return list(all_upstream_counts.keys()), list(all_downstream_counts.keys())
 
 
 def get_downstream_probabilities(all_downstream_counts):
     total_counts = sum(all_downstream_counts.values())
     downstream_probs = {microservice: count / total_counts for microservice, count in all_downstream_counts.items()}
     return downstream_probs
-
-
-def get_downstream_microservices(downstream_counts):
-    return downstream_counts.keys()
 
 
 def sample_downstream_microservices(downstream_probs, n=1):
@@ -138,7 +137,7 @@ def get_lengths_prefix_sum(lengths):
 
 
 def get_edge_feature_count():
-    final_data_dir = os.getenv('FINAL_DATA_DIR')
+    final_data_dir = os.getenv('SAMPLED_DATA_DIR')
     df = pd.read_parquet(os.path.join(final_data_dir, 'data_0.parquet'))
     return len(df.columns) - 4
 
@@ -148,3 +147,7 @@ def get_node_label_encoder():
     with open(filepath, 'rb') as f:
         node_label_encoder = pickle.load(f)
     return node_label_encoder
+
+
+def get_categories_from_encoded_values(encoded_values, label_encoder):
+    label_encoder.inverse_transform(encoded_values).squeeze()

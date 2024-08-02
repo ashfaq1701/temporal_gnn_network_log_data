@@ -12,8 +12,8 @@ from src.embedding.tgn.model.tgn import TGN
 from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
 from src.embedding.tgn.utils.utils import NeighborFinder, RandEdgeSampler, EarlyStopMonitor
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
-from src.preprocess.functions import get_edge_feature_count, get_upstream_counts_object, get_downstream_counts_object, \
-    get_node_label_encoder, get_encoded_nodes
+from src.preprocess.functions import get_edge_feature_count, get_node_label_encoder, get_upstream_and_downstream_nodes, \
+    get_sampled_stats
 from src.utils import get_training_and_validation_file_indices
 
 
@@ -86,7 +86,7 @@ def train_link_prediction_model(args):
     )
 
     upstream_nodes_train, downstream_nodes_train, upstream_nodes_valid, downstream_nodes_valid, n_nodes = \
-        get_upstream_and_downstream_nodes(
+        get_train_test_nodes(
             train_file_start_idx,
             train_file_end_idx,
             valid_file_start_idx,
@@ -261,23 +261,18 @@ def train_link_prediction_model(args):
         logger.info('TGN model saved')
 
 
-def get_upstream_and_downstream_nodes(train_start_idx, train_end_idx, valid_start_idx, valid_end_idx):
-    upstream_counts = get_upstream_counts_object()
-    downstream_counts = get_downstream_counts_object()
+def get_train_test_nodes(train_start_idx, train_end_idx, valid_start_idx, valid_end_idx):
+    sampled_stats = get_sampled_stats()
     node_label_encoder = get_node_label_encoder()
     n_nodes = len(node_label_encoder.classes_)
 
-    upstream_nodes_train, downstream_nodes_train = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        node_label_encoder,
+    upstream_nodes_train, downstream_nodes_train = get_upstream_and_downstream_nodes(
+        sampled_stats,
         train_start_idx,
         train_end_idx
     )
-    upstream_nodes_valid, downstream_nodes_valid = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        node_label_encoder,
+    upstream_nodes_valid, downstream_nodes_valid = get_upstream_and_downstream_nodes(
+        sampled_stats,
         valid_start_idx,
         valid_end_idx
     )

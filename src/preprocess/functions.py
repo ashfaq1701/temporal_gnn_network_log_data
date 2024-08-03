@@ -148,3 +148,23 @@ def get_node_label_encoder():
     with open(filepath, 'rb') as f:
         node_label_encoder = pickle.load(f)
     return node_label_encoder
+
+
+def get_graphs():
+    downstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "downstream_graph.pickle")
+    upstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "upstream_graph.pickle")
+
+    with open(downstream_graph_filepath, 'rb') as f:
+        downstream_graph = pickle.load(f)
+
+    with open(upstream_graph_filepath, 'rb') as f:
+        upstream_graph = pickle.load(f)
+
+    return downstream_graph, upstream_graph
+
+
+def get_filtered_nodes():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_nodes.pickle")
+    with open(filepath, 'rb') as f:
+        filtered_nodes = pickle.load(f)
+    return filtered_nodes

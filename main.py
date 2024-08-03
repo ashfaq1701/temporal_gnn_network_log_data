@@ -7,9 +7,13 @@ from dotenv import load_dotenv
 
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
+from src.preprocess.compute_graph import compute_downstream_graph_for_file
 from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
+from src.preprocess.filter_data import produce_filtered_data
+from src.preprocess.filter_nodes import filter_nodes_k_neighbors
 from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_downstream_counts_object, \
-    get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types
+    get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types, \
+    get_node_label_encoder, get_filtered_nodes
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 from src.preprocess.produce_final_format_data import get_label_encoder, get_one_hot_encoder, store_encoders, \
@@ -163,6 +167,62 @@ def produce_final_format_data(start_idx, end_idx):
     store_encoders(node_label_encoder, rpc_type_one_hot_encoder)
 
 
+def compute_graphs():
+    def merge_graphs(graph, combined_graph):
+        for outer, inner_graph in graph.items():
+            combined_inner_graph = combined_graph.get(outer, {})
+
+            for inner, count in inner_graph.items():
+                combined_inner_graph[inner] = combined_inner_graph.get(inner, 0) + count
+
+            combined_graph[outer] = combined_inner_graph
+
+    combined_i_graph = {}
+    combined_u_graph = {}
+
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(compute_downstream_graph_for_file, idx) for idx in range(20160)]
+
+        for future in concurrent.futures.as_completed(futures):
+            _, i_graph, u_graph = future.result()
+
+            merge_graphs(i_graph, combined_i_graph)
+            merge_graphs(u_graph, combined_u_graph)
+
+    output_dir = os.getenv('AGGREGATED_STATS_DIR')
+    with open(os.path.join(output_dir, 'downstream_graph.pickle'), 'wb') as f:
+        pickle.dump(combined_i_graph, f)
+
+    with open(os.path.join(output_dir, 'upstream_graph.pickle'), 'wb') as f:
+        pickle.dump(combined_u_graph, f)
+
+
+def filter_nodes():
+    nodes = os.getenv('MICROSERVICE_LIST').split(',')
+    k = int(os.getenv('K_NEIGHBOR_FILTER'))
+    filtered_node_list = filter_nodes_k_neighbors(nodes, k)
+    with open(os.path.join(os.getenv('AGGREGATED_STATS_DIR'), 'filtered_nodes.pickle'), 'wb') as f:
+        pickle.dump(filtered_node_list, f)
+
+
+def filter_data_files():
+    label_encoder = get_node_label_encoder()
+    filtered_nodes = get_filtered_nodes()
+    encoded_filtered_nodes = label_encoder.transform(filtered_nodes)
+    filtered_node_set = set(encoded_filtered_nodes)
+
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(produce_filtered_data, idx, filtered_node_set) for idx in range(20160)]
+
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+
 def compute_all_time_statistics_for_files():
     all_mean_time_shift_src = {}
     all_std_time_shift_src = {}
@@ -230,7 +290,6 @@ if __name__ == "__main__":
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
     parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
 
-
     # TGN Arguments
     parser.add_argument('--bs', type=int, default=2000, help='Batch_size')
     parser.add_argument('--prefix', type=str, default='', help='Prefix to name the checkpoints')
@@ -275,7 +334,6 @@ if __name__ == "__main__":
     parser.add_argument('--dyrep', action='store_true',
                         help='Whether to run the dyrep model')
 
-
     # Parse the command-line arguments
     args = parser.parse_args()
 
@@ -299,6 +357,12 @@ if __name__ == "__main__":
             produce_final_format_data(args.start_index, args.end_index)
         case 'compute_time_statistics':
             compute_all_time_statistics_for_files()
+        case 'compute_graphs':
+            compute_graphs()
+        case 'filter_nodes':
+            filter_nodes()
+        case 'produce_filtered_data':
+            filter_data_files()
         case 'train_link_prediction':
             train_link_prediction_model(args)
         case _:

@@ -10,10 +10,10 @@ from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
 from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
 from src.preprocess.filter_data import produce_filtered_data
-from src.preprocess.filter_nodes import filter_nodes_k_neighbors
+from src.preprocess.filter_nodes import filter_nodes_k_neighbors, save_filtered_label_encoder
 from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_downstream_counts_object, \
     get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types, \
-    get_node_label_encoder, get_filtered_nodes
+    get_node_label_encoder, get_filtered_nodes, get_filtered_node_label_encoder
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 from src.preprocess.produce_final_format_data import get_label_encoder, get_one_hot_encoder, store_encoders, \
@@ -202,19 +202,24 @@ def filter_nodes():
     nodes = os.getenv('MICROSERVICE_LIST').split(',')
     k = int(os.getenv('K_NEIGHBOR_FILTER'))
     filtered_node_list = filter_nodes_k_neighbors(nodes, k)
+    save_filtered_label_encoder(filtered_node_list)
     with open(os.path.join(os.getenv('AGGREGATED_STATS_DIR'), 'filtered_nodes.pickle'), 'wb') as f:
         pickle.dump(filtered_node_list, f)
 
 
 def filter_data_files():
     label_encoder = get_node_label_encoder()
+    filtered_label_encoder = get_filtered_node_label_encoder()
     filtered_nodes = get_filtered_nodes()
     encoded_filtered_nodes = label_encoder.transform(filtered_nodes)
     filtered_node_set = set(encoded_filtered_nodes)
 
     n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
     with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
-        futures = [executor.submit(produce_filtered_data, idx, filtered_node_set) for idx in range(20160)]
+        futures = [
+            executor.submit(produce_filtered_data, idx, filtered_node_set, label_encoder, filtered_label_encoder)
+            for idx in range(20160)
+        ]
 
         for future in concurrent.futures.as_completed(futures):
             try:

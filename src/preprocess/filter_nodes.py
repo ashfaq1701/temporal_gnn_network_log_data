@@ -1,3 +1,7 @@
+import os
+import pickle
+
+from sklearn.preprocessing import LabelEncoder
 from src.preprocess.functions import get_node_label_encoder, get_graphs
 
 
@@ -34,3 +38,10 @@ def get_k_neighbor_sets(node, k, downstream_graph, upstream_graph):
     get_nested_k_neighbor_sets(downstream_graph, node, k, i_node_set)
     get_nested_k_neighbor_sets(upstream_graph, node, k, u_node_set)
     return i_node_set, u_node_set
+
+
+def save_filtered_label_encoder(filtered_node_list):
+    label_encoder = LabelEncoder()
+    label_encoder.fit(filtered_node_list)
+    with open(os.path.join(os.getenv('METADATA_DIR'), 'filtered_label_encoder.pickle'), 'wb') as f:
+        pickle.dump(label_encoder, f)

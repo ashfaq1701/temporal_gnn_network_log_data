@@ -150,6 +150,13 @@ def get_node_label_encoder():
     return node_label_encoder
 
 
+def get_filtered_node_label_encoder():
+    filepath = os.path.join(os.getenv('METADATA_DIR'), "filtered_label_encoder.pickle")
+    with open(filepath, 'rb') as f:
+        node_label_encoder = pickle.load(f)
+    return node_label_encoder
+
+
 def get_graphs():
     downstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "downstream_graph.pickle")
     upstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "upstream_graph.pickle")

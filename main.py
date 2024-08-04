@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
+from src.preprocess.compute_seasonality import compute_seasonality_of_microservices
 from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
 from src.preprocess.filter_data import produce_filtered_data
 from src.preprocess.filter_nodes import filter_nodes_k_neighbors, save_filtered_label_encoder
@@ -198,6 +199,13 @@ def compute_graphs():
         pickle.dump(combined_u_graph, f)
 
 
+def compute_seasonality():
+    all_seasonality = compute_seasonality_of_microservices()
+    output_dir = os.getenv('AGGREGATED_STATS_DIR')
+    with open(os.path.join(output_dir, 'all_seasonality.pickle'), 'wb') as f:
+        pickle.dump(all_seasonality, f)
+
+
 def filter_nodes():
     nodes = os.getenv('MICROSERVICE_LIST').split(',')
     k = int(os.getenv('K_NEIGHBOR_FILTER'))
@@ -364,6 +372,8 @@ if __name__ == "__main__":
             compute_all_time_statistics_for_files()
         case 'compute_graphs':
             compute_graphs()
+        case 'compute_seasonality':
+            compute_seasonality()
         case 'filter_nodes':
             filter_nodes()
         case 'produce_filtered_data':

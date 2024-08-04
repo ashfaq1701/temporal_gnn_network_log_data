@@ -69,10 +69,10 @@ def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder, fr
     return encoded_upstream_nodes, encoded_downstream_nodes
 
 
-def get_downstream_probabilities(all_downstream_counts):
-    total_counts = sum(all_downstream_counts.values())
-    downstream_probs = {microservice: count / total_counts for microservice, count in all_downstream_counts.items()}
-    return downstream_probs
+def get_attribute_probabilities(properties):
+    total_counts = sum(properties.values())
+    probs = {microservice: prop / total_counts for microservice, prop in properties.items()}
+    return probs
 
 
 def get_downstream_microservices(downstream_counts):
@@ -138,7 +138,7 @@ def get_lengths_prefix_sum(lengths):
 
 
 def get_edge_feature_count():
-    final_data_dir = os.getenv('FINAL_DATA_DIR')
+    final_data_dir = os.getenv('FILTERED_DATA_DIR')
     df = pd.read_parquet(os.path.join(final_data_dir, 'data_0.parquet'))
     return len(df.columns) - 4
 
@@ -168,6 +168,13 @@ def get_graphs():
         upstream_graph = pickle.load(f)
 
     return downstream_graph, upstream_graph
+
+
+def get_seasonality():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "all_seasonality.pickle")
+    with open(filepath, 'rb') as f:
+        seasonality = pickle.load(f)
+    return seasonality
 
 
 def get_filtered_nodes():

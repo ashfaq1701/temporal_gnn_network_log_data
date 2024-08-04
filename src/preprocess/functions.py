@@ -34,6 +34,16 @@ def get_service_counts_object():
     return service_counts
 
 
+def get_filtered_stats():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_counts.pickle")
+    with open(filepath, 'rb') as f:
+        stats_obj = pickle.load(f)
+    upstream_counts = stats_obj['upstream_counts']
+    downstream_counts = stats_obj['downstream_counts']
+    df_lens = stats_obj['lens']
+    return upstream_counts, downstream_counts, df_lens
+
+
 def get_lengths():
     filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "lengths.pickle")
     with open(filepath, 'rb') as f:
@@ -59,14 +69,10 @@ def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
     return all_counts
 
 
-def get_encoded_nodes(upstream_counts, downstream_counts, node_label_encoder, from_idx=None, to_idx=None):
+def get_encoded_nodes(upstream_counts, downstream_counts, from_idx=None, to_idx=None):
     all_upstream_counts = get_all_call_counts(upstream_counts, from_idx, to_idx)
     all_downstream_counts = get_all_call_counts(downstream_counts, from_idx, to_idx)
-
-    encoded_upstream_nodes = node_label_encoder.transform(list(all_upstream_counts.keys()))
-    encoded_downstream_nodes = node_label_encoder.transform(list(all_downstream_counts.keys()))
-
-    return encoded_upstream_nodes, encoded_downstream_nodes
+    return list(all_upstream_counts.keys()), list(all_downstream_counts.keys())
 
 
 def get_attribute_probabilities(properties):

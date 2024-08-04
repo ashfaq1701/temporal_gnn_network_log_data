@@ -4,9 +4,9 @@ import os
 import pickle
 
 from dotenv import load_dotenv
-
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
+from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
 from src.preprocess.compute_seasonality import compute_seasonality_of_microservices
 from src.preprocess.compute_time_statistics import compute_time_statistics_for_file
@@ -290,6 +290,39 @@ def compute_all_time_statistics_for_files():
         pickle.dump(stats_for_all_files, f)
 
 
+def compute_filtered_stats():
+    n_workers = int(os.getenv('N_WORKERS_PREPROCESSING'))
+
+    all_u_counts = {}
+    all_i_counts = {}
+    all_lens = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        futures = [executor.submit(aggregate_filtered_dataframe, i) for i in range(20160)]
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                idx, u_counts, i_counts, len_df = future.result()
+                all_u_counts[idx] = u_counts
+                all_i_counts[idx] = i_counts
+                all_lens[idx] = len_df
+            except Exception as exc:
+                print(f"Generated an exception: {exc}")
+
+    ordered_u_counts = [u_counts for _, u_counts in sorted(all_u_counts.items())]
+    ordered_i_counts = [i_counts for _, i_counts in sorted(all_i_counts.items())]
+    ordered_lens = [df_len for _, df_len in sorted(all_lens.items())]
+
+    stats_obj = {
+        'upstream_counts': ordered_u_counts,
+        'downstream_counts': ordered_i_counts,
+        'lens': ordered_lens
+    }
+
+    stats_dir = os.getenv('AGGREGATED_STATS_DIR')
+    with open(os.path.join(stats_dir, 'filtered_counts.pickle'), 'wb') as f:
+        pickle.dump(stats_obj, f)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Alibaba Graph Training.")
 
@@ -378,6 +411,8 @@ if __name__ == "__main__":
             filter_nodes()
         case 'produce_filtered_data':
             filter_data_files()
+        case 'produce_filtered_stats':
+            compute_filtered_stats()
         case 'train_link_prediction':
             train_link_prediction_model(args)
         case _:

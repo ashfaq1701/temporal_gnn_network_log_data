@@ -13,7 +13,7 @@ from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDir
 from src.embedding.tgn.utils.utils import NeighborFinder, RandEdgeSampler, EarlyStopMonitor
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
 from src.preprocess.functions import get_edge_feature_count, get_upstream_counts_object, get_downstream_counts_object, \
-    get_node_label_encoder, get_encoded_nodes, get_filtered_node_label_encoder
+    get_node_label_encoder, get_encoded_nodes, get_filtered_node_label_encoder, get_filtered_stats
 from src.utils import get_training_and_validation_file_indices
 
 
@@ -262,22 +262,19 @@ def train_link_prediction_model(args):
 
 
 def get_upstream_and_downstream_nodes(train_start_idx, train_end_idx, valid_start_idx, valid_end_idx):
-    upstream_counts = get_upstream_counts_object()
-    downstream_counts = get_downstream_counts_object()
+    upstream_counts, downstream_counts, _ = get_filtered_stats()
     filtered_label_encoder = get_filtered_node_label_encoder()
     n_nodes = len(filtered_label_encoder.classes_)
 
     upstream_nodes_train, downstream_nodes_train = get_encoded_nodes(
         upstream_counts,
         downstream_counts,
-        filtered_label_encoder,
         train_start_idx,
         train_end_idx
     )
     upstream_nodes_valid, downstream_nodes_valid = get_encoded_nodes(
         upstream_counts,
         downstream_counts,
-        filtered_label_encoder,
         valid_start_idx,
         valid_end_idx
     )

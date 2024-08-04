@@ -27,9 +27,8 @@ class CombinedPandasDatasetFromDirectory(Dataset):
             raise IndexError("No more files to load")
         file_path = self.file_paths[self.current_file_index]
 
-        #if self.logger is not None:
-            #self.logger.info(f'Loading file {file_path} in dataset')
-        print(f'Loading file {file_path} in dataset')
+        if self.logger is not None:
+            self.logger.info(f'Loading file {file_path} in dataset')
 
         self.current_file_index += 1
         df = pd.read_parquet(file_path)
@@ -43,13 +42,11 @@ class CombinedPandasDatasetFromDirectory(Dataset):
     def __getitem__(self, idx):
         file_batch_index = idx % self.num_batches_in_file
         if idx // self.num_batches_in_file > self.current_file_index:
-            print(f'Loading next file {self.current_file_index} ...')
             self.current_df = self._load_next_file()
             self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
 
         start_row = file_batch_index * self.batch_size
         end_row = min(start_row + self.batch_size, len(self.current_df))
-        print(f"{idx} {start_row} {end_row}")
         batch_data = self.current_df.iloc[start_row:end_row]
 
         upstreams = batch_data[['u']].values.flatten().astype(np.int32)

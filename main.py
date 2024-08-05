@@ -401,8 +401,6 @@ if __name__ == "__main__":
             merge_stats()
         case 'produce_final_format_data':
             produce_final_format_data(args.start_index, args.end_index)
-        case 'compute_time_statistics':
-            compute_all_time_statistics_for_files()
         case 'compute_graphs':
             compute_graphs()
         case 'compute_seasonality':
@@ -413,6 +411,8 @@ if __name__ == "__main__":
             filter_data_files()
         case 'produce_filtered_stats':
             compute_filtered_stats()
+        case 'compute_time_statistics':
+            compute_all_time_statistics_for_files()
         case 'train_link_prediction':
             train_link_prediction_model(args)
         case _:

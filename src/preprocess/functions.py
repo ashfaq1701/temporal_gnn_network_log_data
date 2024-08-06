@@ -34,18 +34,21 @@ def get_service_counts_object():
     return service_counts
 
 
+def get_filtered_stats():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_counts.pickle")
+    with open(filepath, 'rb') as f:
+        stats_obj = pickle.load(f)
+    upstream_counts = stats_obj['upstream_counts']
+    downstream_counts = stats_obj['downstream_counts']
+    df_lens = stats_obj['lens']
+    return upstream_counts, downstream_counts, df_lens
+
+
 def get_lengths():
     filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "lengths.pickle")
     with open(filepath, 'rb') as f:
         lengths = pickle.load(f)
     return lengths
-
-
-def get_sampled_stats():
-    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "stats_for_sampled_data.pickle")
-    with open(filepath, 'rb') as f:
-        stats = pickle.load(f)
-    return stats
 
 
 def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
@@ -66,16 +69,20 @@ def get_all_call_counts(call_counts, from_idx=None, to_idx=None):
     return all_counts
 
 
-def get_upstream_and_downstream_nodes(sampled_stats, from_idx=None, to_idx=None):
-    all_upstream_counts = get_all_call_counts(sampled_stats['u_counts'], from_idx, to_idx)
-    all_downstream_counts = get_all_call_counts(sampled_stats['i_counts'], from_idx, to_idx)
+def get_encoded_nodes(upstream_counts, downstream_counts, from_idx=None, to_idx=None):
+    all_upstream_counts = get_all_call_counts(upstream_counts, from_idx, to_idx)
+    all_downstream_counts = get_all_call_counts(downstream_counts, from_idx, to_idx)
     return list(all_upstream_counts.keys()), list(all_downstream_counts.keys())
 
 
-def get_downstream_probabilities(all_downstream_counts):
-    total_counts = sum(all_downstream_counts.values())
-    downstream_probs = {microservice: count / total_counts for microservice, count in all_downstream_counts.items()}
-    return downstream_probs
+def get_attribute_probabilities(properties):
+    total_counts = sum(properties.values())
+    probs = {microservice: prop / total_counts for microservice, prop in properties.items()}
+    return probs
+
+
+def get_downstream_microservices(downstream_counts):
+    return downstream_counts.keys()
 
 
 def sample_downstream_microservices(downstream_probs, n=1):
@@ -137,7 +144,7 @@ def get_lengths_prefix_sum(lengths):
 
 
 def get_edge_feature_count():
-    final_data_dir = os.getenv('SAMPLED_DATA_DIR')
+    final_data_dir = os.getenv('FILTERED_DATA_DIR')
     df = pd.read_parquet(os.path.join(final_data_dir, 'data_0.parquet'))
     return len(df.columns) - 4
 
@@ -149,5 +156,35 @@ def get_node_label_encoder():
     return node_label_encoder
 
 
-def get_categories_from_encoded_values(encoded_values, label_encoder):
-    label_encoder.inverse_transform(encoded_values).squeeze()
+def get_filtered_node_label_encoder():
+    filepath = os.path.join(os.getenv('METADATA_DIR'), "filtered_label_encoder.pickle")
+    with open(filepath, 'rb') as f:
+        node_label_encoder = pickle.load(f)
+    return node_label_encoder
+
+
+def get_graphs():
+    downstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "downstream_graph.pickle")
+    upstream_graph_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "upstream_graph.pickle")
+
+    with open(downstream_graph_filepath, 'rb') as f:
+        downstream_graph = pickle.load(f)
+
+    with open(upstream_graph_filepath, 'rb') as f:
+        upstream_graph = pickle.load(f)
+
+    return downstream_graph, upstream_graph
+
+
+def get_seasonality():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "all_seasonality.pickle")
+    with open(filepath, 'rb') as f:
+        seasonality = pickle.load(f)
+    return seasonality
+
+
+def get_filtered_nodes():
+    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_nodes.pickle")
+    with open(filepath, 'rb') as f:
+        filtered_nodes = pickle.load(f)
+    return filtered_nodes

@@ -8,7 +8,7 @@ from src.utils import combine_means_and_stds
 
 
 def compute_time_statistics_for_file(i):
-    input_dir = os.getenv('SAMPLED_DATA_DIR')
+    input_dir = os.getenv('FILTERED_DATA_DIR')
 
     input_filepath = os.path.join(input_dir, f'data_{i}.parquet')
     df = pd.read_parquet(input_filepath)

@@ -109,7 +109,6 @@ stack-data==0.6.3
 statsmodels==0.14.2
 sympy==1.13.1
 terminado==0.18.1
-tgn @ git+ssh://git@github.com/ashfaq1701/tgn.git@30a13a722816571f2b65573be443bbc0fb600ed1
 threadpoolctl==3.5.0
 tinycss2==1.3.0
 torch==2.4.0

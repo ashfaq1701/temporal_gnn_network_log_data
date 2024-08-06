@@ -3,6 +3,8 @@ import concurrent.futures
 import os
 import pickle
 
+import numpy as np
+import pandas as pd
 from dotenv import load_dotenv
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
@@ -16,6 +18,7 @@ from src.preprocess.functions import get_lengths, get_lengths_prefix_sum, get_do
     get_upstream_counts_object, get_rpctype_counts_object, get_all_microservices, get_all_rpc_types, \
     get_node_label_encoder, get_filtered_nodes, get_filtered_node_label_encoder
 from src.preprocess.get_per_minute_dataframes import break_file_into_per_minute_dataframes
+from src.preprocess.merge_data_files import merge_data_files
 from src.preprocess.preprocess_raw_files import download_and_process_callgraph
 from src.preprocess.produce_final_format_data import get_label_encoder, get_one_hot_encoder, store_encoders, \
     produce_final_format_for_file
@@ -413,6 +416,8 @@ if __name__ == "__main__":
             compute_filtered_stats()
         case 'compute_time_statistics':
             compute_all_time_statistics_for_files()
+        case 'merge_files':
+            merge_data_files()
         case 'train_link_prediction':
             train_link_prediction_model(args)
         case _:

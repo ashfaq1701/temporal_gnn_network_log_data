@@ -1,64 +1,99 @@
-import math
 import os
 
 import numpy as np
+import random
 import pandas as pd
-from torch.utils.data import Dataset
 
 
-class CombinedPandasDatasetFromDirectory(Dataset):
-    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, neighbor_finder=None, logger=None):
-        self.logger = logger
+class Data:
+    def __init__(self, sources, destinations, timestamps, edge_idxs, labels):
+        self.sources = sources
+        self.destinations = destinations
+        self.timestamps = timestamps
+        self.edge_idxs = edge_idxs
+        self.labels = labels
+        self.n_interactions = len(sources)
+        self.unique_nodes = set(sources) | set(destinations)
+        self.n_unique_nodes = len(self.unique_nodes)
 
-        self.file_dir = file_dir
-        self.file_paths = [
-            os.path.join(file_dir, f'data_{idx}.parquet')
-            for idx in range(start_file_idx, end_file_idx)
-        ]
-        self.batch_size = batch_size
-        self.neighbor_finder = neighbor_finder
 
-        self.current_file_index = 0
-        self.current_df = self._load_next_file()
-        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+def get_data_node_classification(train_days, valid_days):
+    ### Load data and train val test split
+    input_dir = os.getenv('MERGED_DATA_DIR')
+    graph_df = pd.read_csv(os.path.join(input_dir, 'ml_alibaba.csv'))
+    edge_features = np.load(os.path.join(input_dir, 'ml_alibaba.npy'))
+    node_features = np.load(os.path.join(input_dir, 'ml_alibaba_node.npy'))
 
-    def _load_next_file(self):
-        if self.current_file_index == len(self.file_paths):
-            raise IndexError("No more files to load")
-        file_path = self.file_paths[self.current_file_index]
+    val_start_time = train_days * 24 * 60 * 60 * 1000
+    val_end_time = (train_days + valid_days) * 24 * 60 * 60 * 1000
 
-        if self.logger is not None:
-            self.logger.info(f'Loading file {file_path} in dataset')
+    sources = graph_df.u.values
+    destinations = graph_df.i.values
+    edge_idxs = graph_df.idx.values
+    labels = graph_df.label.values
+    timestamps = graph_df.ts.values
 
-        self.current_file_index += 1
-        df = pd.read_parquet(file_path)
-        df['rt'] = df['rt'].fillna(df['rt'].median())
-        return df
+    random.seed(2020)
 
-    def __len__(self):
-        total_rows = sum(pd.read_parquet(file_path).shape[0] for file_path in self.file_paths)
-        return math.ceil(total_rows / self.batch_size)
+    # For train we keep edges happening before the validation time which do not involve any new node
+    # used for inductiveness
+    train_mask = timestamps <= val_start_time
 
-    def __getitem__(self, idx):
-        file_batch_index = idx % self.num_batches_in_file
-        if idx // self.num_batches_in_file > self.current_file_index:
-            self.current_df = self._load_next_file()
-            self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+    train_data = Data(sources[train_mask], destinations[train_mask], timestamps[train_mask],
+                      edge_idxs[train_mask], labels[train_mask])
 
-        start_row = file_batch_index * self.batch_size
-        end_row = min(start_row + self.batch_size, len(self.current_df))
-        batch_data = self.current_df.iloc[start_row:end_row]
+    val_mask = np.logical_and(timestamps > val_start_time, timestamps <= val_end_time)
 
-        upstreams = batch_data[['u']].values.flatten().astype(np.int32)
-        downstreams = batch_data[['i']].values.flatten().astype(np.int32)
-        timestamps = batch_data[['ts']].values.flatten().astype(np.int64)
-        edge_indices = batch_data[['idx']].values.flatten().astype(np.int64)
-        edge_features = batch_data.iloc[:, 4:].values.astype(np.int32)
+    # validation and test with all edges
+    val_data = Data(sources[val_mask], destinations[val_mask], timestamps[val_mask],
+                    edge_idxs[val_mask], labels[val_mask])
 
-        if self.neighbor_finder is not None:
-            self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
+    full_data = Data(sources, destinations, timestamps, edge_idxs, labels)
 
-        return upstreams, downstreams, timestamps, edge_indices, edge_features
+    return full_data, node_features, edge_features, train_data, val_data
+
+
+def get_data(train_days, valid_days):
+    ### Load data and train val test split
+    input_dir = os.getenv('MERGED_DATA_DIR')
+    graph_df = pd.read_csv(os.path.join(input_dir, 'ml_alibaba.csv'))
+    edge_features = np.load(os.path.join(input_dir, 'ml_alibaba.npy'))
+    node_features = np.load(os.path.join(input_dir, 'ml_{}_node.npy'))
+
+    val_start_time = train_days * 24 * 60 * 60 * 1000
+    val_end_time = (train_days + valid_days) * 24 * 60 * 60 * 1000
+
+    sources = graph_df.u.values
+    destinations = graph_df.i.values
+    edge_idxs = graph_df.idx.values
+    labels = graph_df.label.values
+    timestamps = graph_df.ts.values
+
+    full_data = Data(sources, destinations, timestamps, edge_idxs, labels)
+
+    random.seed(2020)
+
+    # For train we keep edges happening before the validation time which do not involve any new node
+    # used for inductiveness
+    train_mask = timestamps <= val_start_time
+
+    train_data = Data(sources[train_mask], destinations[train_mask], timestamps[train_mask],
+                      edge_idxs[train_mask], labels[train_mask])
+
+    val_mask = np.logical_and(timestamps > val_start_time, timestamps <= val_end_time)
+
+    # validation and test with all edges
+    val_data = Data(sources[val_mask], destinations[val_mask], timestamps[val_mask],
+                    edge_idxs[val_mask], labels[val_mask])
+
+    print("The dataset has {} interactions, involving {} different nodes".format(full_data.n_interactions,
+                                                                                 full_data.n_unique_nodes))
+    print("The training dataset has {} interactions, involving {} different nodes".format(
+        train_data.n_interactions, train_data.n_unique_nodes))
+    print("The validation dataset has {} interactions, involving {} different nodes".format(
+        val_data.n_interactions, val_data.n_unique_nodes))
+
+    return node_features, edge_features, full_data, train_data, val_data
 
 
 def compute_time_statistics(sources, destinations, timestamps):

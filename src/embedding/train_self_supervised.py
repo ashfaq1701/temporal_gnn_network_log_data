@@ -1,4 +1,5 @@
 import logging
+import math
 import os.path
 import pickle
 import time
@@ -9,12 +10,9 @@ import torch
 
 from src.embedding.tgn.evaluation.evaluation import eval_edge_prediction
 from src.embedding.tgn.model.tgn import TGN
-from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
-from src.embedding.tgn.utils.utils import NeighborFinder, RandEdgeSampler, EarlyStopMonitor
+from src.embedding.tgn.utils.data_processing import get_data
+from src.embedding.tgn.utils.utils import RandEdgeSampler, EarlyStopMonitor, get_neighbor_finder
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
-from src.preprocess.functions import get_edge_feature_count, get_upstream_counts_object, get_downstream_counts_object, \
-    get_node_label_encoder, get_encoded_nodes, get_filtered_node_label_encoder, get_filtered_stats
-from src.utils import get_training_and_validation_file_indices
 
 
 def train_link_prediction_model(args):
@@ -56,72 +54,48 @@ def train_link_prediction_model(args):
 
     data_directory = os.getenv('FILTERED_DATA_DIR')
 
-    training_days = int(os.getenv('TRAINING_DAYS'))
+    training_days =  int(os.getenv('TRAINING_DAYS'))
     validation_days = int(os.getenv('VALIDATION_DAYS'))
-    neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
 
-    (train_file_start_idx, train_file_end_idx), (valid_file_start_idx, valid_file_end_idx) = \
-        get_training_and_validation_file_indices(training_days, validation_days)
+    ### Extract data for training, validation and testing
+    node_features, edge_features, full_data, train_data, val_data = get_data(training_days, validation_days)
 
-    n_edge_features = get_edge_feature_count()
-    n_node_features = int(os.getenv('N_NODE_FEATURES'))
-    neighbor_finder = NeighborFinder(neighbor_buffer_duration_hours * 60 * 60, n_edge_features, args.uniform)
+    # Initialize training neighbor finder to retrieve temporal graph
+    train_ngh_finder = get_neighbor_finder(train_data, args.uniform)
 
-    train_dataset = CombinedPandasDatasetFromDirectory(
-        data_directory,
-        train_file_start_idx,
-        train_file_end_idx,
-        batch_size,
-        neighbor_finder,
-        logger
-    )
+    # Initialize validation and test neighbor finder to retrieve temporal graph
+    full_ngh_finder = get_neighbor_finder(full_data, args.uniform)
 
-    valid_dataset = CombinedPandasDatasetFromDirectory(
-        data_directory,
-        valid_file_start_idx,
-        valid_file_end_idx,
-        batch_size,
-        neighbor_finder,
-        logger
-    )
-
-    upstream_nodes_train, downstream_nodes_train, upstream_nodes_valid, downstream_nodes_valid, n_nodes = \
-        get_upstream_and_downstream_nodes(
-            train_file_start_idx,
-            train_file_end_idx,
-            valid_file_start_idx,
-            valid_file_end_idx
-        )
-
-    train_rand_sampler = RandEdgeSampler(upstream_nodes_train, downstream_nodes_train)
-    val_rand_sampler = RandEdgeSampler(upstream_nodes_valid, downstream_nodes_valid, seed=0)
+    # Initialize negative samplers. Set seeds for validation and testing so negatives are the same
+    # across different runs
+    # NB: in the inductive setting, negatives are sampled only amongst other new nodes
+    train_rand_sampler = RandEdgeSampler(train_data.sources, train_data.destinations)
+    val_rand_sampler = RandEdgeSampler(full_data.sources, full_data.destinations, seed=0)
 
     # Set device
-    if torch.cuda.is_available():
-        device_string = 'cuda:{}'.format(gpu)
-    elif torch.backends.mps.is_available():
-        device_string = 'mps'
-    else:
-        device_string = 'cpu'
-
+    device_string = 'cuda:{}'.format(gpu) if torch.cuda.is_available() else 'cpu'
     device = torch.device(device_string)
 
     # Compute time statistics
-    mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = compute_time_shifts_for_n_days(
-        training_days + validation_days
-    )
+    mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = \
+        compute_time_shifts_for_n_days(14)
 
     for i in range(args.n_runs):
         results_path = "results/{}_{}.pkl".format(args.prefix, i) if i > 0 else "results/{}.pkl".format(args.prefix)
         Path("results/").mkdir(parents=True, exist_ok=True)
 
         # Initialize Model
-        tgn = TGN(n_node_features=n_node_features, n_nodes=n_nodes, n_edge_features=n_edge_features,
-                  neighbor_finder=neighbor_finder, device=device, n_layers=num_layer, n_heads=num_heads,
-                  dropout=drop_out, use_memory=use_memory, message_dimension=message_dim, memory_dimension=memory_dim,
-                  memory_update_at_start=not args.memory_update_at_end, embedding_module_type=args.embedding_module,
-                  message_function=args.message_function, aggregator_type=args.aggregator,
-                  memory_updater_type=args.memory_updater, n_neighbors=num_neighbors,
+        tgn = TGN(neighbor_finder=train_ngh_finder, node_features=node_features,
+                  edge_features=edge_features, device=device,
+                  n_layers=num_layer,
+                  n_heads=num_heads, dropout=drop_out, use_memory=use_memory,
+                  message_dimension=message_dim, memory_dimension=memory_dim,
+                  memory_update_at_start=not args.memory_update_at_end,
+                  embedding_module_type=args.embedding_module,
+                  message_function=args.message_function,
+                  aggregator_type=args.aggregator,
+                  memory_updater_type=args.memory_updater,
+                  n_neighbors=num_neighbors,
                   mean_time_shift_src=mean_time_shift_src, std_time_shift_src=std_time_shift_src,
                   mean_time_shift_dst=mean_time_shift_dst, std_time_shift_dst=std_time_shift_dst,
                   use_destination_embedding_in_message=args.use_destination_embedding_in_message,
@@ -130,6 +104,13 @@ def train_link_prediction_model(args):
         criterion = torch.nn.BCELoss()
         optimizer = torch.optim.Adam(tgn.parameters(), lr=learning_rate)
         tgn = tgn.to(device)
+
+        num_instance = len(train_data.sources)
+        num_batch = math.ceil(num_instance / batch_size)
+
+        logger.info('num of training instances: {}'.format(num_instance))
+        logger.info('num of batches per epoch: {}'.format(num_batch))
+        idx_list = np.arange(num_instance)
 
         val_aps = []
         epoch_times = []
@@ -145,57 +126,44 @@ def train_link_prediction_model(args):
             if use_memory:
                 tgn.memory.__init_memory__()
 
-            neighbor_finder.reset()
+            # Train using only training graph
+            tgn.set_neighbor_finder(train_ngh_finder)
             m_loss = []
 
             logger.info('start {} epoch'.format(epoch))
+            for k in range(0, num_batch, args.backprop_every):
+                loss = 0
+                optimizer.zero_grad()
 
-            backprop_running_count = 0
-            loss = 0
+                # Custom loop to allow to perform backpropagation only every a certain number of batches
+                for j in range(args.backprop_every):
+                    batch_idx = k + j
 
-            for batch in train_dataset:
-                if backprop_running_count == 0:
-                    loss = 0
-                    optimizer.zero_grad()
+                    if batch_idx >= num_batch:
+                        continue
 
-                sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, edge_features_batch = batch
-                size = len(sources_batch)
-                _, negatives_batch = train_rand_sampler.sample(size)
+                    start_idx = batch_idx * batch_size
+                    end_idx = min(num_instance, start_idx + batch_size)
+                    sources_batch, destinations_batch = train_data.sources[start_idx:end_idx], \
+                        train_data.destinations[start_idx:end_idx]
+                    edge_idxs_batch = train_data.edge_idxs[start_idx: end_idx]
+                    timestamps_batch = train_data.timestamps[start_idx:end_idx]
 
-                with torch.no_grad():
-                    pos_label = torch.ones(size, dtype=torch.float, device=device)
-                    neg_label = torch.zeros(size, dtype=torch.float, device=device)
+                    size = len(sources_batch)
+                    _, negatives_batch = train_rand_sampler.sample(size)
 
-                tgn = tgn.train()
-                pos_prob, neg_prob = tgn.compute_edge_probabilities(
-                    sources_batch,
-                    destinations_batch,
-                    negatives_batch,
-                    timestamps_batch,
-                    edge_features_batch,
-                    num_neighbors
-                )
+                    with torch.no_grad():
+                        pos_label = torch.ones(size, dtype=torch.float, device=device)
+                        neg_label = torch.zeros(size, dtype=torch.float, device=device)
 
-                loss += criterion(pos_prob.squeeze(), pos_label) + criterion(neg_prob.squeeze(), neg_label)
+                    tgn = tgn.train()
+                    pos_prob, neg_prob = tgn.compute_edge_probabilities(sources_batch, destinations_batch,
+                                                                        negatives_batch,
+                                                                        timestamps_batch, edge_idxs_batch,
+                                                                        num_neighbors)
 
-                backprop_running_count += 1
-                if backprop_running_count == args.backprop_every:
-                    print(f"Backpropagating {backprop_running_count}")
+                    loss += criterion(pos_prob.squeeze(), pos_label) + criterion(neg_prob.squeeze(), neg_label)
 
-                    backprop_running_count = 0
-
-                    loss /= args.backprop_every
-
-                    loss.backward()
-                    optimizer.step()
-                    m_loss.append(loss.item())
-
-                    # Detach memory after 'args.backprop_every' number of batches so we don't backpropagate to
-                    # the start of time
-                    if use_memory:
-                        tgn.memory.detach_memory()
-
-            if backprop_running_count > 0:
                 loss /= args.backprop_every
 
                 loss.backward()
@@ -210,10 +178,25 @@ def train_link_prediction_model(args):
             epoch_time = time.time() - start_epoch
             epoch_times.append(epoch_time)
 
+            ### Validation
+            # Validation uses the full graph
+            tgn.set_neighbor_finder(full_ngh_finder)
+
+            if use_memory:
+                # Backup memory at the end of training, so later we can restore it and use it for the
+                # validation on unseen nodes
+                train_memory_backup = tgn.memory.backup_memory()
+
             val_ap, val_auc = eval_edge_prediction(model=tgn,
                                                    negative_edge_sampler=val_rand_sampler,
-                                                   valid_dataset=valid_dataset,
+                                                   data=val_data,
                                                    n_neighbors=num_neighbors)
+            if use_memory:
+                val_memory_backup = tgn.memory.backup_memory()
+                # Restore memory we had at the end of training to be used when validating on new nodes.
+                # Also backup memory after validation so it can be used for testing (since test edges are
+                # strictly later in time than validation edges)
+                tgn.memory.restore_memory(train_memory_backup)
 
             val_aps.append(val_ap)
             train_losses.append(np.mean(m_loss))
@@ -231,10 +214,6 @@ def train_link_prediction_model(args):
 
             logger.info('epoch: {} took {:.2f}s'.format(epoch, total_epoch_time))
             logger.info('Epoch mean loss: {}'.format(np.mean(m_loss)))
-            logger.info(
-                'val auc: {}'.format(val_auc))
-            logger.info(
-                'val ap: {}'.format(val_ap))
 
             # Early stopping
             if early_stopper.early_stop_check(val_ap):
@@ -257,26 +236,8 @@ def train_link_prediction_model(args):
         }, open(results_path, "wb"))
 
         logger.info('Saving TGN model')
+        if use_memory:
+            # Restore memory at the end of validation (save a model which is ready for testing)
+            tgn.memory.restore_memory(val_memory_backup)
         torch.save(tgn.state_dict(), model_save_path)
         logger.info('TGN model saved')
-
-
-def get_upstream_and_downstream_nodes(train_start_idx, train_end_idx, valid_start_idx, valid_end_idx):
-    upstream_counts, downstream_counts, _ = get_filtered_stats()
-    filtered_label_encoder = get_filtered_node_label_encoder()
-    n_nodes = len(filtered_label_encoder.classes_)
-
-    upstream_nodes_train, downstream_nodes_train = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        train_start_idx,
-        train_end_idx
-    )
-    upstream_nodes_valid, downstream_nodes_valid = get_encoded_nodes(
-        upstream_counts,
-        downstream_counts,
-        valid_start_idx,
-        valid_end_idx
-    )
-
-    return upstream_nodes_train, downstream_nodes_train, upstream_nodes_valid, downstream_nodes_valid, n_nodes

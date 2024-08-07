@@ -56,8 +56,8 @@ def train_link_prediction_model(args):
 
     data_directory = os.getenv('FILTERED_DATA_DIR')
 
-    training_days = int(os.getenv('TRAINING_DAYS'))
-    validation_days = int(os.getenv('VALIDATION_DAYS'))
+    training_days = int(os.getenv('TRAIN_DAYS'))
+    validation_days = int(os.getenv('VALID_DAYS'))
     neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
 
     (train_file_start_idx, train_file_end_idx), (valid_file_start_idx, valid_file_end_idx) = \

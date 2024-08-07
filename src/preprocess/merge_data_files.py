@@ -20,6 +20,7 @@ def merge_data_files():
         filepath = os.path.join(input_dir, f'data_{idx}.parquet')
         df = pd.read_parquet(filepath)
         dataframes.append(df)
+        print(f'Read {filepath}')
 
     merged_df = pd.concat(dataframes, ignore_index=True)
 

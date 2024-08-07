@@ -14,23 +14,14 @@ def merge_data_files():
     num_node_features = int(os.getenv('N_NODE_FEATURES'))
     input_dir = os.getenv('FILTERED_DATA_DIR')
 
-    merged_df = None
-    dataframe_batch = []
+    dataframes = []
 
     for idx in range(20160):
         filepath = os.path.join(input_dir, f'data_{idx}.parquet')
         df = pd.read_parquet(filepath)
-        dataframe_batch.append(df)
+        dataframes.append(df)
 
-        if len(dataframe_batch) == BATCH_SIZE:
-            if merged_df is None:
-                merged_df = pd.concat(dataframe_batch, ignore_index=True)
-            else:
-                merged_df = pd.concat([merged_df] + dataframe_batch, ignore_index=True)
-
-            dataframe_batch = []
-
-        print(f'Read file {filepath}')
+    merged_df = pd.concat(dataframes, ignore_index=True)
 
     features_df = merged_df[['u', 'i', 'ts', 'label', 'idx']]
     edges_df = merged_df.iloc[:, 4:]

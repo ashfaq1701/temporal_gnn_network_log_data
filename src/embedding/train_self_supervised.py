@@ -105,6 +105,7 @@ def train_link_prediction_model(args):
         device_string = 'cpu'
 
     device = torch.device(device_string)
+    logger.info('Device: {}'.format(device))
 
     # Compute time statistics
     mean_time_shift_src, std_time_shift_src, mean_time_shift_dst, std_time_shift_dst = compute_time_shifts_for_n_days(

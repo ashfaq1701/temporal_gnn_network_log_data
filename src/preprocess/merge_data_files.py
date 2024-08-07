@@ -19,7 +19,7 @@ def merge_data_files():
         filepath = os.path.join(input_dir, f'data_{idx}.parquet')
         dataframes.append(pd.read_parquet(filepath))
 
-    merged_df = pd.concat(dataframes, ignore_index=True)
+    merged_df = combine_dataframes_in_batches(dataframes, batch_size=1000)
 
     features_df = merged_df[['u', 'i', 'ts', 'label', 'idx']]
     edges_df = merged_df.iloc[:, 4:]
@@ -30,3 +30,11 @@ def merge_data_files():
     features_df.to_csv(os.path.join(output_dir, 'ml_alibaba.csv'))
     np.save(os.path.join(output_dir, 'ml_alibaba.npy'), edges_df)
     np.save(os.path.join(output_dir, 'ml_alibaba_node.npy'), nodes_df)
+
+
+def combine_dataframes_in_batches(dfs, batch_size=100):
+    combined_df = pd.DataFrame()
+    for i in range(0, len(dfs), batch_size):
+        batch_dfs = dfs[i:i+batch_size]
+        combined_df = pd.concat([combined_df] + batch_dfs, ignore_index=True)
+    return combined_df

@@ -18,6 +18,7 @@ def merge_data_files():
     for idx in range(20160):
         filepath = os.path.join(input_dir, f'data_{idx}.parquet')
         dataframes.append(pd.read_parquet(filepath))
+        print(f'Processed file {filepath}')
 
     merged_df = combine_dataframes_in_batches(dataframes, batch_size=1000)
 

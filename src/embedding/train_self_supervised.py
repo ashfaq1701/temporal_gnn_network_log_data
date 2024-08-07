@@ -73,6 +73,22 @@ def train_link_prediction_model(args):
     val_rand_sampler = RandEdgeSampler(full_data.sources, full_data.destinations, seed=0)
 
     # Set device
+    if torch.cuda.is_available():
+        device_string = 'cuda:{}'.format(gpu)
+    elif torch.backends.mps.is_available():
+        device_string = 'mps'
+    else:
+        device_string = 'cpu'
+
+        num_cores = os.cpu_count()
+        print(f'Num CPU cores: {num_cores}')
+        torch.set_num_threads(num_cores)
+        torch.set_num_interop_threads(num_cores)
+
+    device = torch.device(device_string)
+    logger.info('Device: {}'.format(device))
+
+    # Set device
     device_string = 'cuda:{}'.format(gpu) if torch.cuda.is_available() else 'cpu'
     device = torch.device(device_string)
 

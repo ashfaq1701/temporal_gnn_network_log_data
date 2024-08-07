@@ -14,12 +14,12 @@ def merge_data_files():
     num_node_features = int(os.getenv('N_NODE_FEATURES'))
     input_dir = os.getenv('FILTERED_DATA_DIR')
 
-    dataframes = []
+    running_len_sum = 0
 
     for idx in range(20160):
         filepath = os.path.join(input_dir, f'data_{idx}.parquet')
         df = pd.read_parquet(filepath)
-        dataframes.append(df)
+        df.index = pd.RangeIndex(start=running_len_sum, stop=running_len_sum + len(df), step=1)
         print(f'Read {filepath}')
 
     merged_df = pd.concat(dataframes, ignore_index=True)

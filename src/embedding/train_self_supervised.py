@@ -104,6 +104,11 @@ def train_link_prediction_model(args):
     else:
         device_string = 'cpu'
 
+        num_cores = os.cpu_count()
+        print(f'Num CPU cores: {num_cores}')
+        torch.set_num_threads(num_cores)
+        torch.set_num_interop_threads(num_cores)
+
     device = torch.device(device_string)
     logger.info('Device: {}'.format(device))
 

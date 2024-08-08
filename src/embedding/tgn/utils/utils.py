@@ -1,6 +1,6 @@
 import itertools
 from collections import deque
-import multiprocessing as mp
+
 import numpy as np
 import torch
 
@@ -104,75 +104,75 @@ class NeighborInfo:
 
 
 class NeighborFinder:
-    def __init__(self, max_time_in_seconds, n_edge_features, uniform=False):
+    def __init__(self, neighbor_buffer_duration_hours, n_edge_features, uniform=False):
         self.n_edge_features = n_edge_features
         self.uniform = uniform
-        self.max_time_in_milliseconds = max_time_in_seconds * 1000
+        self.neighbor_buff_duration_ms = neighbor_buffer_duration_hours * 60 * 60 * 1000
         self.adj_list = {}
         self.adj_list_snapshot = None
         self.latest_timestamp = 0
 
     def add_interactions(self, upstreams, downstreams, timestamps, edge_idxs, edge_features):
-        data = zip(upstreams, downstreams, timestamps, edge_idxs, edge_features)
-        for row in data:
-            self._process_interaction(row)
+        unique_node_list = list(set(upstreams) | set(downstreams))
+        for node in unique_node_list:
+            if node not in self.adj_list:
+                self.adj_list[node] = deque()
 
-    def _process_interaction(self, interaction):
-        us, ds, ts, edge_idx, edge_feat = interaction
-        self.latest_timestamp = max(self.latest_timestamp, ts)
-        self.add_neighbor_to_node(us, ds, ts, edge_idx, edge_feat)
-        self.add_neighbor_to_node(ds, us, ts, edge_idx, edge_feat)
+        batch_nodes = {}
 
-    def add_neighbor_to_node(self, node, neighbor, timestamp, edge_idx, edge_features):
-        if node not in self.adj_list:
-            self.adj_list[node] = deque()
+        if len(timestamps) > 0:
+            self.latest_timestamp = timestamps[-1]
 
-        neighbor_info = NeighborInfo(node, neighbor, timestamp, edge_idx, edge_features)
+        for i in range(len(upstreams)):
+            us_node = NeighborInfo(upstreams[i], downstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
+            ds_node = NeighborInfo(downstreams[i], upstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
 
-        self.adj_list[node].append(neighbor_info)
+            if upstreams[i] not in batch_nodes:
+                batch_nodes[upstreams[i]] = []
+            if downstreams[i] not in batch_nodes:
+                batch_nodes[downstreams[i]] = []
 
-        while len(self.adj_list[node]) > 0 and \
-                self.latest_timestamp - self.adj_list[node][0].timestamp > self.max_time_in_milliseconds:
-            self.adj_list[node].popleft()
+            batch_nodes[upstreams[i]].append(us_node)
+            batch_nodes[downstreams[i]].append(ds_node)
+
+        for node_name, node_obj_list in batch_nodes.items():
+            self.adj_list[node_name].extend(node_obj_list)
+            while len(self.adj_list[node_name]) > 0 and \
+                    self.latest_timestamp - self.adj_list[node_name][0].timestamp < self.neighbor_buff_duration_ms:
+                self.adj_list[node_name].popleft()
 
     def get_temporal_neighbor(self, source_nodes, n_neighbors=20):
-        all_neighbors = []
-        all_edge_indices = []
-        all_timestamps = []
-        all_edge_features = []
+        all_neighbors = np.zeros((len(source_nodes), n_neighbors))
+        all_edge_indices = np.zeros((len(source_nodes), n_neighbors))
+        all_timestamps = np.zeros((len(source_nodes), n_neighbors))
+        all_edge_features = np.zeros((len(source_nodes), n_neighbors, self.n_edge_features))
 
-        for source_node in source_nodes:
+        for i, source_node in enumerate(source_nodes):
             source_adj = self.adj_list.get(source_node, deque())
 
-            neighbors = np.zeros(n_neighbors)
-            edge_indices = np.zeros(n_neighbors)
-            timestamps = np.zeros(n_neighbors)
-            edge_features = np.zeros((n_neighbors, self.n_edge_features))
+            derived_n_neighbors = min(n_neighbors, len(source_adj))
+            if self.uniform and len(source_adj) > 0:
+                indices = np.random.choice(len(source_adj), n_neighbors)
+                entries = [source_adj[idx] for idx in indices]
+            else:
+                entries = list(itertools.islice(source_adj, len(source_adj) - derived_n_neighbors, len(source_adj)))
 
-            derived_n_neighbors = n_neighbors
-            if len(source_adj) > 0 and n_neighbors > 0:
-                if self.uniform:
-                    indices = np.random.randint(0, len(source_adj), n_neighbors)
-                    entries = [source_adj[idx] for idx in indices]
-                else:
-                    derived_n_neighbors = min(n_neighbors, len(source_adj))
-                    entries = list(itertools.islice(source_adj, len(source_adj) - derived_n_neighbors, len(source_adj)))
+            if entries:
+                neighbors = np.array([entry.neighbor for entry in entries])
+                edge_indices = np.array([entry.edge_idx for entry in entries])
+                timestamps = np.array([entry.timestamp for entry in entries])
+                edge_features = np.array([entry.edge_features for entry in entries])
 
-                neighbors[-derived_n_neighbors:] = np.array([entry.neighbor for entry in entries])
-                edge_indices[-derived_n_neighbors:] = np.array([entry.edge_idx for entry in entries])
-                timestamps[-derived_n_neighbors:] = np.array([entry.timestamp for entry in entries])
-                edge_features[-derived_n_neighbors:, :] = np.array([entry.edge_features for entry in entries])
-
-            all_neighbors.append(neighbors)
-            all_edge_indices.append(edge_indices)
-            all_timestamps.append(timestamps)
-            all_edge_features.append(edge_features)
+                all_neighbors[i, -derived_n_neighbors:] = neighbors
+                all_edge_indices[i, -derived_n_neighbors:] = edge_indices
+                all_timestamps[i, -derived_n_neighbors:] = timestamps
+                all_edge_features[i, -derived_n_neighbors:, :] = edge_features
 
         return (
-            np.array(all_neighbors),
-            np.array(all_edge_indices),
-            np.array(all_timestamps),
-            np.array(all_edge_features).astype(np.float32)
+            all_neighbors,
+            all_edge_indices,
+            all_timestamps,
+            all_edge_features.astype(np.float32)
         )
 
     def reset(self):

@@ -55,10 +55,17 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         edge_indices = batch_data[['idx']].values.flatten().astype(np.int64)
         edge_features = batch_data.iloc[:, 4:].values.astype(np.int32)
 
+        return upstreams, downstreams, timestamps, edge_indices, edge_features
+
+    def add_batch_to_neighbor_finder(self, batch):
+        upstreams, downstreams, timestamps, edge_indices, edge_features = batch
         if self.neighbor_finder is not None:
             self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
 
-        return upstreams, downstreams, timestamps, edge_indices, edge_features
+    def reset(self):
+        self.current_file_index = 0
+        self.current_df = self._load_next_file()
+        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
 
 
 def compute_time_statistics(sources, destinations, timestamps):

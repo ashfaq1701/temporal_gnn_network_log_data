@@ -3,7 +3,7 @@ import torch
 from sklearn.metrics import average_precision_score, roc_auc_score
 
 
-def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbors, batch_size=2000):
+def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbors):
     # Ensures the random sampler uses a seed for evaluation (i.e. we sample always the same
     # negatives for validation / test set)
     assert negative_edge_sampler.seed is not None
@@ -22,6 +22,8 @@ def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbor
             pos_prob, neg_prob = model.compute_edge_probabilities(sources_batch, destinations_batch,
                                                                   negative_samples, timestamps_batch,
                                                                   edge_features_batch, n_neighbors)
+
+            valid_dataset.add_batch_to_neighbor_finder(batch)
 
             pred_score = np.concatenate([(pos_prob).cpu().numpy(), (neg_prob).cpu().numpy()])
             true_label = np.concatenate([np.ones(size), np.zeros(size)])

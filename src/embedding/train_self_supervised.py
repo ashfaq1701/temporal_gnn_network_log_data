@@ -12,8 +12,8 @@ from src.embedding.tgn.model.tgn import TGN
 from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
 from src.embedding.tgn.utils.utils import NeighborFinder, RandEdgeSampler, EarlyStopMonitor
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
-from src.preprocess.functions import get_edge_feature_count, get_upstream_counts_object, get_downstream_counts_object, \
-    get_node_label_encoder, get_encoded_nodes, get_filtered_node_label_encoder, get_filtered_stats
+from src.preprocess.functions import get_edge_feature_count, get_encoded_nodes, get_filtered_node_label_encoder, \
+    get_filtered_stats
 from src.utils import get_training_and_validation_file_indices
 
 
@@ -58,14 +58,14 @@ def train_link_prediction_model(args):
 
     training_days = int(os.getenv('TRAIN_DAYS'))
     validation_days = int(os.getenv('VALID_DAYS'))
-    neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
 
     (train_file_start_idx, train_file_end_idx), (valid_file_start_idx, valid_file_end_idx) = \
         get_training_and_validation_file_indices(training_days, validation_days)
 
+    neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
     n_edge_features = get_edge_feature_count()
     n_node_features = int(os.getenv('N_NODE_FEATURES'))
-    neighbor_finder = NeighborFinder(neighbor_buffer_duration_hours * 60 * 60, n_edge_features, args.uniform)
+    neighbor_finder = NeighborFinder(neighbor_buffer_duration_hours, n_edge_features, args.uniform)
 
     train_dataset = CombinedPandasDatasetFromDirectory(
         data_directory,
@@ -151,7 +151,10 @@ def train_link_prediction_model(args):
             if use_memory:
                 tgn.memory.__init_memory__()
 
+            train_dataset.reset()
+            valid_dataset.reset()
             neighbor_finder.reset()
+
             m_loss = []
 
             logger.info('start {} epoch'.format(epoch))
@@ -183,6 +186,7 @@ def train_link_prediction_model(args):
                 )
 
                 loss += criterion(pos_prob.squeeze(), pos_label) + criterion(neg_prob.squeeze(), neg_label)
+                train_dataset.add_batch_to_neighbor_finder(batch)
 
                 backprop_running_count += 1
                 if backprop_running_count == args.backprop_every:

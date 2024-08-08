@@ -21,18 +21,20 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         self.current_file_index = 0
         self.current_df = self._load_next_file()
         self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+        self.last_file_end_batch_idx = -1
 
     def _load_next_file(self):
         if self.current_file_index == len(self.file_paths):
             raise IndexError("No more files to load")
         file_path = self.file_paths[self.current_file_index]
 
-        if self.logger is not None:
-            self.logger.info(f'Loading file {file_path} in dataset')
-
         self.current_file_index += 1
         df = pd.read_parquet(file_path)
         df['rt'] = df['rt'].fillna(df['rt'].median())
+
+        if self.logger is not None:
+            self.logger.info(f'Loading file {file_path} in dataset')
+
         return df
 
     def __len__(self):
@@ -40,11 +42,12 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         return math.ceil(total_rows / self.batch_size)
 
     def __getitem__(self, idx):
-        file_batch_index = idx % self.num_batches_in_file
-        if idx // self.num_batches_in_file > self.current_file_index:
+        if idx - self.last_file_end_batch_idx > self.num_batches_in_file:
             self.current_df = self._load_next_file()
             self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+            self.last_file_end_batch_idx = idx - 1
 
+        file_batch_index = idx - self.last_file_end_batch_idx - 1
         start_row = file_batch_index * self.batch_size
         end_row = min(start_row + self.batch_size, len(self.current_df))
         batch_data = self.current_df.iloc[start_row:end_row]
@@ -66,6 +69,7 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         self.current_file_index = 0
         self.current_df = self._load_next_file()
         self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+        self.last_file_end_batch_idx = -1
 
 
 def compute_time_statistics(sources, destinations, timestamps):

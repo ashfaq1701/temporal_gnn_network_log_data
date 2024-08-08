@@ -190,8 +190,6 @@ def train_link_prediction_model(args):
 
                 backprop_running_count += 1
                 if backprop_running_count == args.backprop_every:
-                    print(f"Backpropagating {backprop_running_count}")
-
                     backprop_running_count = 0
 
                     loss /= args.backprop_every

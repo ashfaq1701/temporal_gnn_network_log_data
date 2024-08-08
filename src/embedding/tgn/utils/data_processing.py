@@ -1,5 +1,7 @@
 import math
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np
 import pandas as pd
@@ -19,33 +21,48 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         self.neighbor_finder = neighbor_finder
 
         self.current_file_index = 0
-        self.current_df = self._load_next_file()
-        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+        self.num_batches_in_file = 0
         self.last_file_end_batch_idx = -1
+        self.current_df = pd.DataFrame()
 
-    def _load_next_file(self):
-        if self.current_file_index == len(self.file_paths):
-            raise IndexError("No more files to load")
-        file_path = self.file_paths[self.current_file_index]
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self.next_file_future: Future = None
+        self.lock = threading.Lock()
 
-        self.current_file_index += 1
-        df = pd.read_parquet(file_path)
-        df['rt'] = df['rt'].fillna(df['rt'].median())
+        self._load_initial_file()
 
+    def _load_initial_file(self):
+        self.current_df = self._load_file(0)
+        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+        if len(self.file_paths) > 1:
+            self.next_file_future = self.executor.submit(self._load_file, 1)
+
+    def _load_file(self, file_index):
         if self.logger is not None:
-            self.logger.info(f'Loading file {file_path} in dataset')
-
+            self.logger.info(f'Loading file {self.file_paths[file_index]} in dataset')
+        df = pd.read_parquet(self.file_paths[file_index])
+        df['rt'] = df['rt'].fillna(df['rt'].median())
         return df
+
+    def _load_next_file_in_background(self):
+        if self.current_file_index < len(self.file_paths) - 1:
+            self.current_file_index += 1
+            self.current_df = self.next_file_future.result()
+            self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+            if self.current_file_index < len(self.file_paths) - 1:
+                self.next_file_future = self.executor.submit(self._load_file, self.current_file_index + 1)
+        else:
+            raise IndexError("No more files to load")
 
     def __len__(self):
         total_rows = sum(pd.read_parquet(file_path).shape[0] for file_path in self.file_paths)
         return math.ceil(total_rows / self.batch_size)
 
     def __getitem__(self, idx):
-        if idx - self.last_file_end_batch_idx > self.num_batches_in_file:
-            self.current_df = self._load_next_file()
-            self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
-            self.last_file_end_batch_idx = idx - 1
+        with self.lock:
+            if idx - self.last_file_end_batch_idx > self.num_batches_in_file:
+                self._load_next_file_in_background()
+                self.last_file_end_batch_idx = idx - 1
 
         file_batch_index = idx - self.last_file_end_batch_idx - 1
         start_row = file_batch_index * self.batch_size
@@ -66,10 +83,14 @@ class CombinedPandasDatasetFromDirectory(Dataset):
             self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
 
     def reset(self):
+        self.executor.shutdown(wait=False)
+        self.executor = ThreadPoolExecutor(max_workers=1)
         self.current_file_index = 0
-        self.current_df = self._load_next_file()
-        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
         self.last_file_end_batch_idx = -1
+        self.current_df = self._load_file(0)
+        self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
+        if len(self.file_paths) > 1:
+            self.next_file_future = self.executor.submit(self._load_file, 1)
 
 
 def compute_time_statistics(sources, destinations, timestamps):

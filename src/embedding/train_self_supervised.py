@@ -33,17 +33,22 @@ def train_link_prediction_model(args):
     message_dim = args.message_dim
     memory_dim = args.memory_dim
 
-    Path("saved_models/").mkdir(parents=True, exist_ok=True)
-    Path("saved_checkpoints/").mkdir(parents=True, exist_ok=True)
-    model_save_path = f'saved_models/{args.prefix}.pth'
-    get_checkpoint_path = lambda epoch: f'saved_checkpoints/{args.prefix}-{args.data}-{epoch}.pth'
+    results_dir = os.getenv('RESULTS_DIR')
+
+    Path(os.path.join(results_dir, "saved_models")).mkdir(parents=True, exist_ok=True)
+    Path(os.path.join(results_dir, "saved_checkpoints")).mkdir(parents=True, exist_ok=True)
+    model_save_path = os.path.join(results_dir, f'saved_models/{args.prefix}.pth')
+    get_checkpoint_path = lambda epoch: os.path.join(
+        results_dir,
+        f'saved_checkpoints/{args.prefix}-{args.data}-{epoch}.pth'
+    )
 
     ### set up logger
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    Path("log/").mkdir(parents=True, exist_ok=True)
-    fh = logging.FileHandler('log/{}.log'.format(str(time.time())))
+    Path(os.path.join(results_dir, "log/")).mkdir(parents=True, exist_ok=True)
+    fh = logging.FileHandler(os.path.join(results_dir, 'log/{}.log').format(str(time.time())))
     fh.setLevel(logging.DEBUG)
     ch = logging.StreamHandler()
     ch.setLevel(logging.WARN)
@@ -118,8 +123,11 @@ def train_link_prediction_model(args):
     )
 
     for i in range(args.n_runs):
-        results_path = "results/{}_{}.pkl".format(args.prefix, i) if i > 0 else "results/{}.pkl".format(args.prefix)
-        Path("results/").mkdir(parents=True, exist_ok=True)
+        results_path = os.path.join(
+            results_dir,
+            "results/{}_{}.pkl".format(args.prefix, i) if i > 0 else "results/{}.pkl".format(args.prefix)
+        )
+        Path(os.path.join(results_dir, "results/")).mkdir(parents=True, exist_ok=True)
 
         # Initialize Model
         tgn = TGN(n_node_features=n_node_features, n_nodes=n_nodes, n_edge_features=n_edge_features,

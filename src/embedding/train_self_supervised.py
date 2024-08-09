@@ -218,6 +218,7 @@ def train_link_prediction_model(args):
             epoch_time = time.time() - start_epoch
             epoch_times.append(epoch_time)
 
+            logger.info('Starting evaluation')
             val_ap, val_auc = eval_edge_prediction(model=tgn,
                                                    negative_edge_sampler=val_rand_sampler,
                                                    valid_dataset=valid_dataset,

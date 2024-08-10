@@ -34,9 +34,12 @@ def get_service_counts_object():
     return service_counts
 
 
-def get_filtered_stats():
-    filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_counts.pickle")
-    with open(filepath, 'rb') as f:
+def get_filtered_stats(filepath=None):
+    if filepath is None:
+        derived_filepath = os.path.join(os.getenv('AGGREGATED_STATS_DIR'), "filtered_counts.pickle")
+    else:
+        derived_filepath = filepath
+    with open(derived_filepath, 'rb') as f:
         stats_obj = pickle.load(f)
     upstream_counts = stats_obj['upstream_counts']
     downstream_counts = stats_obj['downstream_counts']
@@ -188,3 +191,8 @@ def get_filtered_nodes():
     with open(filepath, 'rb') as f:
         filtered_nodes = pickle.load(f)
     return filtered_nodes
+
+
+def get_total_interactions(filepath=None):
+    _, _, lens = get_filtered_stats(filepath)
+    return sum(lens)

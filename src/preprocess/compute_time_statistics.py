@@ -38,7 +38,7 @@ def compute_time_shifts_for_n_days(days):
     all_std_time_shift_dst = time_stats['all_std_time_shift_dst']
     all_lengths = time_stats['all_lengths']
 
-    total_minutes = days * 24 * 60
+    total_minutes = int(days * 24 * 60)
 
     combined_mean_src, combined_std_src = combine_means_and_stds(
         all_mean_time_shift_src[:total_minutes],

@@ -75,7 +75,7 @@ def combine_means_and_stds(means, stds, sizes):
 
 
 def get_training_and_validation_file_indices(training_days, validation_days):
-    training_minutes = training_days * 24 * 60
-    validation_minutes = validation_days * 24 * 60
+    training_minutes = int(training_days * 24 * 60)
+    validation_minutes = int(validation_days * 24 * 60)
     return (0, training_minutes), (training_minutes, training_minutes + validation_minutes)
 

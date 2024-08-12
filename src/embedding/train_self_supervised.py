@@ -61,8 +61,8 @@ def train_link_prediction_model(args):
 
     data_directory = os.getenv('FILTERED_DATA_DIR')
 
-    training_days = int(os.getenv('TRAIN_DAYS'))
-    validation_days = int(os.getenv('VALID_DAYS'))
+    training_days = float(os.getenv('TRAIN_DAYS'))
+    validation_days = float(os.getenv('VALID_DAYS'))
 
     (train_file_start_idx, train_file_end_idx), (valid_file_start_idx, valid_file_end_idx) = \
         get_training_and_validation_file_indices(training_days, validation_days)

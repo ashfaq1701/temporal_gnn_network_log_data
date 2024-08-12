@@ -27,7 +27,6 @@ class CombinedPandasDatasetFromDirectory(Dataset):
 
         self.executor = ThreadPoolExecutor(max_workers=1)
         self.next_file_future: Future = None
-        self.lock = threading.Lock()
 
         self._load_initial_file()
 
@@ -59,10 +58,9 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         return math.ceil(total_rows / self.batch_size)
 
     def __getitem__(self, idx):
-        with self.lock:
-            if idx - self.last_file_end_batch_idx > self.num_batches_in_file:
-                self._load_next_file_in_background()
-                self.last_file_end_batch_idx = idx - 1
+        if idx - self.last_file_end_batch_idx > self.num_batches_in_file:
+            self._load_next_file_in_background()
+            self.last_file_end_batch_idx = idx - 1
 
         file_batch_index = idx - self.last_file_end_batch_idx - 1
         start_row = file_batch_index * self.batch_size

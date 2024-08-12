@@ -37,10 +37,10 @@ def train_link_prediction_model(args):
 
     Path(os.path.join(results_dir, "saved_models")).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(results_dir, "saved_checkpoints")).mkdir(parents=True, exist_ok=True)
-    model_save_path = os.path.join(results_dir, f'saved_models/{args.prefix}.pth')
+    model_save_path = os.path.join(results_dir, f'saved_models/{args.prefix}-alibaba.pth')
     get_checkpoint_path = lambda epoch: os.path.join(
         results_dir,
-        f'saved_checkpoints/{args.prefix}-{args.data}-{epoch}.pth'
+        f'saved_checkpoints/{args.prefix}-alibaba-{epoch}.pth'
     )
 
     ### set up logger
@@ -125,7 +125,7 @@ def train_link_prediction_model(args):
     for i in range(args.n_runs):
         results_path = os.path.join(
             results_dir,
-            "results/{}_{}.pkl".format(args.prefix, i) if i > 0 else "results/{}.pkl".format(args.prefix)
+            "results/{}_alibaba_{}.pkl".format(args.prefix, i) if i > 0 else "results/{}_alibaba.pkl".format(args.prefix)
         )
         Path(os.path.join(results_dir, "results/")).mkdir(parents=True, exist_ok=True)
 

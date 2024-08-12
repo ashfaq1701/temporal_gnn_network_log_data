@@ -138,7 +138,7 @@ class NeighborFinder:
         for node_name, node_obj_list in batch_nodes.items():
             self.adj_list[node_name].extend(node_obj_list)
             while len(self.adj_list[node_name]) > 0 and \
-                    self.latest_timestamp - self.adj_list[node_name][0].timestamp < self.neighbor_buff_duration_ms:
+                    self.latest_timestamp - self.adj_list[node_name][0].timestamp > self.neighbor_buff_duration_ms:
                 self.adj_list[node_name].popleft()
 
     def get_temporal_neighbor(self, source_nodes, n_neighbors=20):
@@ -163,10 +163,12 @@ class NeighborFinder:
                 timestamps = np.array([entry.timestamp for entry in entries])
                 edge_features = np.array([entry.edge_features for entry in entries])
 
-                all_neighbors[i, -derived_n_neighbors:] = neighbors
-                all_edge_indices[i, -derived_n_neighbors:] = edge_indices
-                all_timestamps[i, -derived_n_neighbors:] = timestamps
-                all_edge_features[i, -derived_n_neighbors:, :] = edge_features
+                len_sampled_data = len(neighbors)
+
+                all_neighbors[i, -len_sampled_data:] = neighbors
+                all_edge_indices[i, -len_sampled_data:] = edge_indices
+                all_timestamps[i, -len_sampled_data:] = timestamps
+                all_edge_features[i, -len_sampled_data:, :] = edge_features
 
         return (
             all_neighbors,

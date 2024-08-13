@@ -1,5 +1,6 @@
 import itertools
 from collections import deque
+from numba import jit
 
 import numpy as np
 import torch
@@ -91,18 +92,6 @@ class RandEdgeSampler(object):
         self.random_state = np.random.RandomState(self.seed)
 
 
-class NeighborInfo:
-    def __init__(self, node, neighbor, timestamp, edge_idx, edge_features):
-        self.node = node
-        self.neighbor = neighbor
-        self.timestamp = timestamp
-        self.edge_idx = edge_idx
-        self.edge_features = edge_features
-
-    def __lt__(self, other):
-        return self.timestamp < other.timestamp
-
-
 class NeighborFinder:
     def __init__(self, neighbor_buffer_duration_hours, n_edge_features, uniform=False):
         self.n_edge_features = n_edge_features
@@ -112,6 +101,7 @@ class NeighborFinder:
         self.adj_list_snapshot = None
         self.latest_timestamp = 0
 
+    @jit
     def add_interactions(self, upstreams, downstreams, timestamps, edge_idxs, edge_features):
         unique_node_list = list(set(upstreams) | set(downstreams))
         for node in unique_node_list:
@@ -124,8 +114,8 @@ class NeighborFinder:
             self.latest_timestamp = timestamps[-1]
 
         for i in range(len(upstreams)):
-            us_node = NeighborInfo(upstreams[i], downstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
-            ds_node = NeighborInfo(downstreams[i], upstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
+            us_node = (upstreams[i], downstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
+            ds_node = (downstreams[i], upstreams[i], timestamps[i], edge_idxs[i], edge_features[i])
 
             if upstreams[i] not in batch_nodes:
                 batch_nodes[upstreams[i]] = []
@@ -141,6 +131,7 @@ class NeighborFinder:
                     self.latest_timestamp - self.adj_list[node_name][0].timestamp > self.neighbor_buff_duration_ms:
                 self.adj_list[node_name].popleft()
 
+    @jit
     def get_temporal_neighbor(self, source_nodes, n_neighbors=20):
         all_neighbors = np.zeros((len(source_nodes), n_neighbors))
         all_edge_indices = np.zeros((len(source_nodes), n_neighbors))
@@ -158,10 +149,10 @@ class NeighborFinder:
                 entries = list(itertools.islice(source_adj, len(source_adj) - derived_n_neighbors, len(source_adj)))
 
             if entries:
-                neighbors = np.array([entry.neighbor for entry in entries])
-                edge_indices = np.array([entry.edge_idx for entry in entries])
-                timestamps = np.array([entry.timestamp for entry in entries])
-                edge_features = np.array([entry.edge_features for entry in entries])
+                neighbors = np.array([entry[1] for entry in entries])
+                edge_indices = np.array([entry[3] for entry in entries])
+                timestamps = np.array([entry[2] for entry in entries])
+                edge_features = np.array([entry[4] for entry in entries])
 
                 len_sampled_data = len(neighbors)
 

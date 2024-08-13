@@ -9,7 +9,7 @@ from torch.utils.data import Dataset
 
 
 class CombinedPandasDatasetFromDirectory(Dataset):
-    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, neighbor_finder=None, logger=None):
+    def __init__(self, file_dir, start_file_idx, end_file_idx, batch_size=2000, ngh_finder=None, logger=None):
         self.logger = logger
 
         self.file_dir = file_dir
@@ -18,7 +18,7 @@ class CombinedPandasDatasetFromDirectory(Dataset):
             for idx in range(start_file_idx, end_file_idx)
         ]
         self.batch_size = batch_size
-        self.neighbor_finder = neighbor_finder
+        self.ngh_finder = ngh_finder
 
         self.current_file_index = 0
         self.num_batches_in_file = 0
@@ -77,8 +77,8 @@ class CombinedPandasDatasetFromDirectory(Dataset):
 
     def add_batch_to_neighbor_finder(self, batch):
         upstreams, downstreams, timestamps, edge_indices, edge_features = batch
-        if self.neighbor_finder is not None:
-            self.neighbor_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
+        if self.ngh_finder is not None:
+            self.ngh_finder.add_interactions(upstreams, downstreams, timestamps, edge_indices, edge_features)
 
     def reset(self):
         self.executor.shutdown(wait=False)

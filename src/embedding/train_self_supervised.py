@@ -5,6 +5,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+import sys
 import torch
 
 from src.embedding.tgn.evaluation.evaluation import eval_edge_prediction
@@ -15,6 +16,9 @@ from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_day
 from src.preprocess.functions import get_edge_feature_count, get_encoded_nodes, get_filtered_node_label_encoder, \
     get_filtered_stats
 from src.utils import get_training_and_validation_file_indices
+
+sys.path.append(os.path.abspath('./build'))
+import neighbor_finder
 
 
 def train_link_prediction_model(args):
@@ -70,14 +74,14 @@ def train_link_prediction_model(args):
     neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
     n_edge_features = get_edge_feature_count()
     n_node_features = int(os.getenv('N_NODE_FEATURES'))
-    neighbor_finder = NeighborFinder(neighbor_buffer_duration_hours, n_edge_features, args.uniform)
+    ngh_finder = neighbor_finder.NeighborFinder(neighbor_buffer_duration_hours, n_edge_features, args.uniform)
 
     train_dataset = CombinedPandasDatasetFromDirectory(
         data_directory,
         train_file_start_idx,
         train_file_end_idx,
         batch_size,
-        neighbor_finder,
+        ngh_finder,
         logger
     )
 
@@ -86,7 +90,7 @@ def train_link_prediction_model(args):
         valid_file_start_idx,
         valid_file_end_idx,
         batch_size,
-        neighbor_finder,
+        ngh_finder,
         logger
     )
 
@@ -131,7 +135,7 @@ def train_link_prediction_model(args):
 
         # Initialize Model
         tgn = TGN(n_node_features=n_node_features, n_nodes=n_nodes, n_edge_features=n_edge_features,
-                  neighbor_finder=neighbor_finder, device=device, n_layers=num_layer, n_heads=num_heads,
+                  neighbor_finder=ngh_finder, device=device, n_layers=num_layer, n_heads=num_heads,
                   dropout=drop_out, use_memory=use_memory, message_dimension=message_dim, memory_dimension=memory_dim,
                   memory_update_at_start=not args.memory_update_at_end, embedding_module_type=args.embedding_module,
                   message_function=args.message_function, aggregator_type=args.aggregator,
@@ -161,7 +165,7 @@ def train_link_prediction_model(args):
 
             train_dataset.reset()
             valid_dataset.reset()
-            neighbor_finder.reset()
+            ngh_finder.reset()
 
             m_loss = []
 

@@ -326,8 +326,6 @@ def compute_filtered_stats():
 
 
 if __name__ == "__main__":
-    sys.path.append(os.path.abspath('./build'))
-
     parser = argparse.ArgumentParser(description="Alibaba Graph Training.")
 
     # Add arguments to the parser

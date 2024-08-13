@@ -4,6 +4,7 @@
 #include <random>
 #include <unordered_set>
 #include <thread>
+#include <pybind11/stl.h>
 
 NeighborInfo::NeighborInfo(
     const int node,

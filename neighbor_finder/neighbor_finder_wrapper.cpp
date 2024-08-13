@@ -18,12 +18,10 @@ PYBIND11_MODULE(neighbor_finder, m) {
                 {num_source_nodes, n_neighbors},
                 neighbors.data());
 
-            // Create py::array_t for edge_indices
             py::array_t<int64_t> py_edge_indices(
                 {num_source_nodes, n_neighbors},
                 edge_indices.data());
 
-            // Create py::array_t for timestamps
             py::array_t<int64_t> py_timestamps(
                 {num_source_nodes, n_neighbors},
                 timestamps.data());

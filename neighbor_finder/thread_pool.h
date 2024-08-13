@@ -1,3 +1,7 @@
+/**
+ * Credit https://github.com/progschj/ThreadPool
+**/
+
 #ifndef THREAD_POOL_H
 #define THREAD_POOL_H
 

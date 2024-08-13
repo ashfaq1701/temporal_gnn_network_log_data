@@ -41,7 +41,7 @@ find_package(pybind11 REQUIRED)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
-add_library(neighbor_finder SHARED neighbor_finder.cpp thread_pool.h)
+add_library(neighbor_finder SHARED neighbor_finder.cpp thread_pool.h neighbor_finder_wrapper.cpp)
 
 # Link the libraries
 target_link_libraries(neighbor_finder PRIVATE pybind11::module ${Python3_LIBRARIES} ${NumPy_LIBRARIES})

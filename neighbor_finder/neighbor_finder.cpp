@@ -94,21 +94,14 @@ void NeighborFinder::add_interactions(
     }
 }
 
-std::tuple<int*, int64_t*, int64_t*, float*, size_t> NeighborFinder::get_temporal_neighbor(
-    const std::vector<int>& source_nodes,
-    const int n_neighbors) {
+std::tuple<std::vector<int>, std::vector<int64_t>, std::vector<int64_t>, std::vector<float>, int>
+NeighborFinder::get_temporal_neighbor(const std::vector<int>& source_nodes, const int n_neighbors) {
     const size_t num_source_nodes = source_nodes.size();
-    const size_t total_size = num_source_nodes * n_neighbors;
 
-    auto* neighbors = new int[total_size];
-    auto* edge_indices = new int64_t[total_size];
-    auto* timestamps = new int64_t[total_size];
-    auto* edge_features = new float[total_size * n_edge_features];
-
-    std::fill_n(neighbors, total_size, 0);
-    std::fill_n(edge_indices, total_size, 0);
-    std::fill_n(edge_indices, total_size, 0);
-    std::fill_n(edge_features, total_size * n_edge_features, 0.0);
+    std::vector<int> neighbors(num_source_nodes * n_neighbors);
+    std::vector<int64_t> edge_indices(num_source_nodes * n_neighbors);
+    std::vector<int64_t> timestamps(num_source_nodes * n_neighbors);
+    std::vector<float> edge_features(num_source_nodes * n_neighbors * n_edge_features);
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -143,7 +136,7 @@ std::tuple<int*, int64_t*, int64_t*, float*, size_t> NeighborFinder::get_tempora
             std::copy(
                 entry.edge_features->begin(),
                 entry.edge_features->end(),
-                edge_features + write_idx * n_edge_features);
+                edge_features.begin() + write_idx * n_edge_features);
 
             ++write_idx;
         }
@@ -163,7 +156,12 @@ std::tuple<int*, int64_t*, int64_t*, float*, size_t> NeighborFinder::get_tempora
         future.wait();
     }
 
-    return std::make_tuple(neighbors, edge_indices, timestamps, edge_features, total_size);
+    return std::make_tuple(
+        neighbors,
+        edge_indices,
+        timestamps,
+        edge_features,
+        n_edge_features);
 }
 
 void NeighborFinder::reset() {

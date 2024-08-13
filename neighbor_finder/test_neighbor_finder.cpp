@@ -18,13 +18,13 @@ int main() {
         }
     );
 
-    auto [neighbors, edge_indices, timestamps, edge_features, total_size] = neighbor_finder->get_temporal_neighbor(
+    auto [neighbors, edge_indices, timestamps, edge_features, n_edge_feats] =
+        neighbor_finder->get_temporal_neighbor(
         {2, 4, 9},
-        5
-    );
+        5);
 
     std::cout << "Neighbors:\n";
-    for (size_t i = 0; i < total_size; ++i) {
+    for (size_t i = 0; i < neighbors.size(); ++i) {
         std::cout << "Index " << i
                   << ": Neighbor = " << neighbors[i]
                   << ", Edge Index = " << edge_indices[i]
@@ -37,4 +37,6 @@ int main() {
         }
         std::cout << std::endl;
     }
+
+    std::cout << "Num edge features: " << n_edge_feats << endl;
 }

@@ -51,8 +51,8 @@ public:
         const std::vector<std::vector<float>>& edge_features);
 
     // Method to get temporal neighbors
-    std::tuple<int*, int64_t*, int64_t*, float*, size_t>
-    get_temporal_neighbor(const std::vector<int>& source_nodes, int n_neighbors = 20);
+    std::tuple<std::vector<int>, std::vector<int64_t>, std::vector<int64_t>, std::vector<float>, int>
+    get_temporal_neighbor(const std::vector<int>& source_nodes, int n_neighbors);
 
     // Method to reset the adjacency list
     void reset();

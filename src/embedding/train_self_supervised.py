@@ -10,7 +10,7 @@ import torch
 from src.embedding.tgn.evaluation.evaluation import eval_edge_prediction
 from src.embedding.tgn.model.tgn import TGN
 from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
-from src.embedding.tgn.utils.utils import NeighborFinder, RandEdgeSampler, EarlyStopMonitor
+from src.embedding.tgn.utils.utils import RandEdgeSampler, EarlyStopMonitor
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
 from src.preprocess.functions import get_edge_feature_count, get_encoded_nodes, get_filtered_node_label_encoder, \
     get_filtered_stats

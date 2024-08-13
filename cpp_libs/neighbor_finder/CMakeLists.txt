@@ -19,14 +19,6 @@ execute_process(
 )
 message(STATUS "Python library directory: ${PYTHON_LIBRARY}")
 
-# Manually specify NumPy include directory
-execute_process(
-        COMMAND python3 -c "import numpy; print(numpy.get_include())"
-        OUTPUT_VARIABLE PYTHON_NUMPY_INCLUDE_DIRS
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-message(STATUS "NumPy include directory: ${PYTHON_NUMPY_INCLUDE_DIRS}")
-
 execute_process(
         COMMAND python3 -c "import pybind11; print(f'{pybind11.get_include()}/../share/cmake/pybind11')"
         OUTPUT_VARIABLE pybind11_DIR
@@ -34,20 +26,22 @@ execute_process(
 )
 message(STATUS "PyBind11 include directory: ${pybind11_DIR}")
 
-include_directories(${PYTHON_INCLUDE_DIR} ${PYTHON_NUMPY_INCLUDE_DIRS})
+include_directories(${PYTHON_INCLUDE_DIR} ${pybind11_DIR} ${PYTHON_LIBRARY} ${PYTHON_NUMPY_INCLUDE_DIRS})
 
 # Grab Python, 3.8 or newer
 find_package(pybind11 REQUIRED)
 
 find_package(Python3 COMPONENTS Interpreter Development REQUIRED)
 
-add_library(neighbor_finder SHARED neighbor_finder.cpp thread_pool.h neighbor_finder_wrapper.cpp)
+pybind11_add_module(neighbor_finder SHARED neighbor_finder.cpp neighbor_finder_wrapper.cpp)
 
 # Link the libraries
-target_link_libraries(neighbor_finder PRIVATE pybind11::module ${Python3_LIBRARIES} ${NumPy_LIBRARIES})
+target_link_libraries(neighbor_finder PRIVATE pybind11::module ${Python3_LIBRARIES})
+
+target_compile_definitions(neighbor_finder PRIVATE VERSION_INFO=${EXAMPLE_VERSION_INFO})
 
 # Create an executable for testing (optional)
-add_executable(test_neighbor_finder neighbor_finder.cpp thread_pool.h test_neighbor_finder.cpp)
+add_executable(test_neighbor_finder neighbor_finder.cpp test_neighbor_finder.cpp)
 
 # Link the executable with the neighbor_finder library
 target_link_libraries(test_neighbor_finder PRIVATE neighbor_finder)

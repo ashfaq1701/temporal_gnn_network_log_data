@@ -17,6 +17,7 @@ torch = "*"
 jupyter = "*"
 statsmodels = "*"
 scipy = "*"
+pybind11 = "*"
 
 [dev-packages]
 

@@ -2,8 +2,10 @@ import argparse
 import concurrent.futures
 import os
 import pickle
+import sys
 
 from dotenv import load_dotenv
+
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
@@ -324,6 +326,8 @@ def compute_filtered_stats():
 
 
 if __name__ == "__main__":
+    sys.path.append(os.path.abspath('./build'))
+
     parser = argparse.ArgumentParser(description="Alibaba Graph Training.")
 
     # Add arguments to the parser

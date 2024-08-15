@@ -32,3 +32,7 @@ def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbor
             val_auc.append(roc_auc_score(true_label, pred_score))
 
     return np.mean(val_ap), np.mean(val_auc)
+
+
+def eval_workload_prediction(tgn, workload_predictor, valid_dataset, n_neighbors):
+    return 0.0

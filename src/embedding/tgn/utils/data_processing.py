@@ -17,6 +17,8 @@ class CombinedPandasDatasetFromDirectory(Dataset):
             os.path.join(file_dir, f'data_{idx}.parquet')
             for idx in range(start_file_idx, end_file_idx)
         ]
+
+        self.total_batches = 0
         self.batch_size = batch_size
         self.ngh_finder = ngh_finder
 
@@ -62,6 +64,8 @@ class CombinedPandasDatasetFromDirectory(Dataset):
             self._load_next_file_in_background()
             self.last_file_end_batch_idx = idx - 1
 
+        self.total_batches += 1
+
         file_batch_index = idx - self.last_file_end_batch_idx - 1
         start_row = file_batch_index * self.batch_size
         end_row = min(start_row + self.batch_size, len(self.current_df))
@@ -85,12 +89,16 @@ class CombinedPandasDatasetFromDirectory(Dataset):
     def reset(self):
         self.executor.shutdown(wait=False)
         self.executor = ThreadPoolExecutor(max_workers=1)
+        self.total_batches = 0
         self.current_file_index = 0
         self.last_file_end_batch_idx = -1
         self.current_df = self._load_file(0)
         self.num_batches_in_file = math.ceil(len(self.current_df) / self.batch_size)
         if len(self.file_paths) > 1:
             self.next_file_future = self.executor.submit(self._load_file, 1)
+
+    def get_total_batches(self):
+        return self.total_batches
 
 
 def compute_time_statistics(sources, destinations, timestamps):

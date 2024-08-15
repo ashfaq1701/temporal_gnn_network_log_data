@@ -100,3 +100,19 @@ def get_unique_latest_nodes_with_indices(nodes, timestamps):
     unique_values, first_occurrence_indices = np.unique(sorted_data[:, 0], return_index=True)
     unique_latest_values = sorted_data[first_occurrence_indices]
     return unique_latest_values[:, [0, 2]]
+
+
+def get_future_workloads(nodes, curr_minute, workloads, n_future):
+    future_workloads = workloads[nodes, curr_minute + 1:curr_minute + n_future + 1]
+    padding_width = n_future - future_workloads.shape[1]
+
+    if padding_width > 0:
+        padded_array = np.pad(
+            future_workloads,
+            pad_width=((0, 0), (0, padding_width)),
+            mode='constant',
+            constant_values=0.0
+        )
+    else:
+        padded_array = future_workloads
+    return padded_array

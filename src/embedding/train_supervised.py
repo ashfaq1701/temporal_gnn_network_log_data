@@ -156,10 +156,10 @@ def train_workload_prediction_model(args):
         logger.info('TGN models loaded')
         logger.info('Start training node classification task')
 
-        workload_predictor = WorkloadPredictionModel(n_past, n_future, memory_dim)
-        workload_predictor_optimizer = torch.optim.Adam(workload_predictor.parameters(), lr=args.lr)
-        workload_predictor = workload_predictor.to(device)
-        workload_predictor_loss_criterion = torch.nn.L1Loss()
+        # workload_predictor = WorkloadPredictionModel(n_past, n_future, memory_dim)
+        # workload_predictor_optimizer = torch.optim.Adam(workload_predictor.parameters(), lr=args.lr)
+        # workload_predictor = workload_predictor.to(device)
+        # workload_predictor_loss_criterion = torch.nn.L1Loss()
 
         val_aucs = []
         epoch_times = []
@@ -222,44 +222,44 @@ def train_workload_prediction_model(args):
 
                     current_minute += 1
 
-            train_losses.append(loss / train_dataset.get_total_batches())
-
-            val_auc = eval_workload_prediction(
-                tgn=tgn,
-                workload_predictor=workload_predictor,
-                valid_dataset=valid_dataset,
-                n_neighbors=num_neighbors
-            )
-            val_aucs.append(val_auc)
-
-            epoch_time = time.time() - start_epoch
-            epoch_times.append(epoch_time)
-
-            pickle.dump({
-                "val_aps": val_aucs,
-                "train_losses": train_losses,
-                "epoch_times": epoch_times
-            }, open(results_path, "wb"))
-
-            logger.info(
-                f'Epoch {epoch}: train loss: {loss / train_dataset.get_total_batches()}, val auc: {val_auc}, time: {time.time() - start_epoch}')
-
-        if args.use_validation:
-            if early_stopper.early_stop_check(val_auc):
-                logger.info('No improvement over {} epochs, stop training'.format(early_stopper.max_round))
-                break
-            else:
-                torch.save(workload_predictor.state_dict(), get_checkpoint_path(epoch))
-
-        if args.use_validation:
-            logger.info(f'Loading the best model at epoch {early_stopper.best_epoch}')
-            best_model_path = get_checkpoint_path(early_stopper.best_epoch)
-            workload_predictor.load_state_dict(torch.load(best_model_path))
-            logger.info(f'Loaded the best model at epoch {early_stopper.best_epoch} for inference')
-            workload_predictor.eval()
-
-        pickle.dump({
-            "val_aps": val_aucs,
-            "train_losses": train_losses,
-            "epoch_times": [0.0]
-        }, open(results_path, "wb"))
+        #     train_losses.append(loss / train_dataset.get_total_batches())
+        #
+        #     val_auc = eval_workload_prediction(
+        #         tgn=tgn,
+        #         workload_predictor=workload_predictor,
+        #         valid_dataset=valid_dataset,
+        #         n_neighbors=num_neighbors
+        #     )
+        #     val_aucs.append(val_auc)
+        #
+        #     epoch_time = time.time() - start_epoch
+        #     epoch_times.append(epoch_time)
+        #
+        #     pickle.dump({
+        #         "val_aps": val_aucs,
+        #         "train_losses": train_losses,
+        #         "epoch_times": epoch_times
+        #     }, open(results_path, "wb"))
+        #
+        #     logger.info(
+        #         f'Epoch {epoch}: train loss: {loss / train_dataset.get_total_batches()}, val auc: {val_auc}, time: {time.time() - start_epoch}')
+        #
+        # if args.use_validation:
+        #     if early_stopper.early_stop_check(val_auc):
+        #         logger.info('No improvement over {} epochs, stop training'.format(early_stopper.max_round))
+        #         break
+        #     else:
+        #         torch.save(workload_predictor.state_dict(), get_checkpoint_path(epoch))
+        #
+        # if args.use_validation:
+        #     logger.info(f'Loading the best model at epoch {early_stopper.best_epoch}')
+        #     best_model_path = get_checkpoint_path(early_stopper.best_epoch)
+        #     workload_predictor.load_state_dict(torch.load(best_model_path))
+        #     logger.info(f'Loaded the best model at epoch {early_stopper.best_epoch} for inference')
+        #     workload_predictor.eval()
+        #
+        # pickle.dump({
+        #     "val_aps": val_aucs,
+        #     "train_losses": train_losses,
+        #     "epoch_times": [0.0]
+        # }, open(results_path, "wb"))

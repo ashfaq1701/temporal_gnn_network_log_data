@@ -73,7 +73,6 @@ def train_link_prediction_model(args):
 
     neighbor_buffer_duration_hours = int(os.getenv('NEIGHBOR_BUFFER_DURATION_HOURS'))
     n_edge_features = get_edge_feature_count()
-    n_node_features = int(os.getenv('N_NODE_FEATURES'))
     ngh_finder = neighbor_finder.NeighborFinder(neighbor_buffer_duration_hours, n_edge_features, args.uniform)
 
     train_dataset = CombinedPandasDatasetFromDirectory(
@@ -134,7 +133,7 @@ def train_link_prediction_model(args):
         Path(os.path.join(results_dir, "results/")).mkdir(parents=True, exist_ok=True)
 
         # Initialize Model
-        tgn = TGN(n_node_features=n_node_features, n_nodes=n_nodes, n_edge_features=n_edge_features,
+        tgn = TGN(n_node_features=memory_dim, n_nodes=n_nodes, n_edge_features=n_edge_features,
                   neighbor_finder=ngh_finder, device=device, n_layers=num_layer, n_heads=num_heads,
                   dropout=drop_out, use_memory=use_memory, message_dimension=message_dim, memory_dimension=memory_dim,
                   memory_update_at_start=not args.memory_update_at_end, embedding_module_type=args.embedding_module,
@@ -179,7 +178,7 @@ def train_link_prediction_model(args):
                     loss = 0
                     optimizer.zero_grad()
 
-                sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, edge_features_batch = batch
+                sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, edge_features_batch, current_file_end = batch
                 size = len(sources_batch)
                 _, negatives_batch = train_rand_sampler.sample(size)
 
@@ -198,7 +197,7 @@ def train_link_prediction_model(args):
                 )
 
                 loss += criterion(pos_prob.squeeze(), pos_label) + criterion(neg_prob.squeeze(), neg_label)
-                train_dataset.add_batch_to_neighbor_finder(batch)
+                train_dataset.add_batch_to_neighbor_finder(batch[:-1])
 
                 backprop_running_count += 1
                 if backprop_running_count == args.backprop_every:

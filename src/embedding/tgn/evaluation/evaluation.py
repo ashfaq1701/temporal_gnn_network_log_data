@@ -14,7 +14,7 @@ def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbor
         model = model.eval()
 
         for batch in valid_dataset:
-            sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, edge_features_batch = batch
+            sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, edge_features_batch, _ = batch
 
             size = len(sources_batch)
             _, negative_samples = negative_edge_sampler.sample(size)
@@ -23,7 +23,7 @@ def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbor
                                                                   negative_samples, timestamps_batch,
                                                                   edge_features_batch, n_neighbors)
 
-            valid_dataset.add_batch_to_neighbor_finder(batch)
+            valid_dataset.add_batch_to_neighbor_finder(batch[:-1])
 
             pred_score = np.concatenate([(pos_prob).cpu().numpy(), (neg_prob).cpu().numpy()])
             true_label = np.concatenate([np.ones(size), np.zeros(size)])

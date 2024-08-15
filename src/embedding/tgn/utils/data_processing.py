@@ -73,7 +73,9 @@ class CombinedPandasDatasetFromDirectory(Dataset):
         edge_indices = batch_data[['idx']].values.flatten().astype(np.int64)
         edge_features = batch_data.iloc[:, 4:].values.astype(np.int32)
 
-        return upstreams, downstreams, timestamps, edge_indices, edge_features
+        current_file_end = end_row >= len(self.current_df)
+
+        return upstreams, downstreams, timestamps, edge_indices, edge_features, current_file_end
 
     def add_batch_to_neighbor_finder(self, batch):
         upstreams, downstreams, timestamps, edge_indices, edge_features = batch

@@ -7,6 +7,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.embedding.train_self_supervised import train_link_prediction_model
+from src.embedding.train_supervised import train_workload_prediction_model
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
@@ -338,6 +339,9 @@ if __name__ == "__main__":
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
     parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
 
+    parser.add_argument('--n_past', type=int, default=5, help='Number of past timesteps to predict from.')
+    parser.add_argument('--n_future', type=int, default=3, help='Number of future timesteps to predict')
+
     # TGN Arguments
     parser.add_argument('--bs', type=int, default=2000, help='Batch_size')
     parser.add_argument('--prefix', type=str, default='', help='Prefix to name the checkpoints')
@@ -381,6 +385,8 @@ if __name__ == "__main__":
                         help='Whether to use the embedding of the source node as part of the message')
     parser.add_argument('--dyrep', action='store_true',
                         help='Whether to run the dyrep model')
+    parser.add_argument('--use_validation', action='store_true',
+                        help='Whether to use a validation set')
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -417,5 +423,7 @@ if __name__ == "__main__":
             compute_all_time_statistics_for_files()
         case 'train_link_prediction':
             train_link_prediction_model(args)
+        case 'train_workload_prediction':
+            train_workload_prediction_model(args)
         case _:
             raise ValueError(f'Invalid task: {args.task}')

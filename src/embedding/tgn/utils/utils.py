@@ -90,3 +90,13 @@ class RandEdgeSampler(object):
 
 def get_node_features(source_nodes, n_node_features):
     return np.zeros((len(source_nodes), n_node_features))
+
+
+def get_unique_latest_nodes_with_indices(nodes, timestamps):
+    data = np.vstack((nodes, timestamps)).T
+    sorted_indices = np.lexsort((-data[:, 1], data[:, 0]))
+    merged_array = np.column_stack((data, sorted_indices))
+    sorted_data = merged_array[sorted_indices]
+    unique_values, first_occurrence_indices = np.unique(sorted_data[:, 0], return_index=True)
+    unique_latest_values = sorted_data[first_occurrence_indices]
+    return unique_latest_values[:, [0, 2]]

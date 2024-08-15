@@ -3,6 +3,7 @@ import re
 import pickle
 import random
 
+import numpy as np
 import pandas as pd
 
 
@@ -196,3 +197,20 @@ def get_filtered_nodes():
 def get_total_interactions(filepath=None):
     _, _, lens = get_filtered_stats(filepath)
     return sum(lens)
+
+
+def get_filtered_workload_counts():
+    _, downstream_counts, _ = get_filtered_stats()
+    filtered_node_label_encoder = get_filtered_node_label_encoder()
+    n_nodes = len(filtered_node_label_encoder.classes_)
+    workloads = []
+
+    for node_id in range(n_nodes):
+        workload_for_node = []
+
+        for downstream_counts_current_minute in downstream_counts:
+            workload_for_node.append(downstream_counts_current_minute.get(node_id, 0.0))
+
+        workloads.append(workload_for_node)
+
+    return np.array(workloads)

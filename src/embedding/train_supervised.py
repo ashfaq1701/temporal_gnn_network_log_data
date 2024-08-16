@@ -113,6 +113,8 @@ def train_workload_prediction_model(args):
     # Set device
     if torch.cuda.is_available():
         device_string = 'cuda:{}'.format(gpu)
+    elif torch.backends.mps.is_available():
+        device_string = 'mps'
     else:
         device_string = 'cpu'
 

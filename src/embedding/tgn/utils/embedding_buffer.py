@@ -92,3 +92,5 @@ class EmbeddingBuffer:
         self.current_embedding_store.clear()
         self.node_embedding_buffer = None
         self.node_id_buffer = None
+        self.workload_buffer = None
+        self.timestep_buffer = None

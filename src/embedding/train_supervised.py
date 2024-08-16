@@ -250,6 +250,7 @@ def train_workload_prediction_model(args):
 
             train_losses.append(loss / train_dataset.get_total_batches())
 
+            logger.info('Starting evaluation')
             val_mae, val_mse, val_r2, val_loss, workload_preds_epoch = eval_workload_prediction(
                 tgn=tgn,
                 workload_predictor=workload_predictor,

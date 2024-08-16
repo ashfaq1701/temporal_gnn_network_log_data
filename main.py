@@ -343,7 +343,8 @@ if __name__ == "__main__":
     parser.add_argument('--n_future', type=int, default=3, help='Number of future timesteps to predict')
 
     # TGN Arguments
-    parser.add_argument('--bs', type=int, default=2000, help='Batch_size')
+    parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')
+    parser.add_argument('--workload_prediction_bs', type=int, default=2000, help='Workload Prediction Batch_size')
     parser.add_argument('--prefix', type=str, default='', help='Prefix to name the checkpoints')
     parser.add_argument('--n_degree', type=int, default=10, help='Number of neighbors to sample')
     parser.add_argument('--n_head', type=int, default=2, help='Number of heads used in attention layer')
@@ -385,8 +386,6 @@ if __name__ == "__main__":
                         help='Whether to use the embedding of the source node as part of the message')
     parser.add_argument('--dyrep', action='store_true',
                         help='Whether to run the dyrep model')
-    parser.add_argument('--use_validation', action='store_true',
-                        help='Whether to use a validation set')
 
     # Parse the command-line arguments
     args = parser.parse_args()

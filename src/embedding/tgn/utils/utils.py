@@ -116,3 +116,13 @@ def get_future_workloads(nodes, curr_minute, workloads, n_future):
     else:
         padded_array = future_workloads
     return padded_array
+
+
+def combine_predictions(true_workloads, pred_workloads, nodes, timestamps):
+    combined = np.hstack((nodes[:, None], timestamps[:, None], true_workloads, pred_workloads))
+    sorted_indices = np.lexsort((timestamps, nodes))
+    sorted_combined = combined[sorted_indices]
+    unique_nodes = np.unique(nodes)
+    sorted_unique_nodes = np.sort(unique_nodes)
+    grouped_arrays = [sorted_combined[sorted_combined[:, 0] == node][:, 2:] for node in sorted_unique_nodes]
+    return grouped_arrays

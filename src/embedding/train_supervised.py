@@ -24,7 +24,8 @@ import neighbor_finder
 
 
 def train_workload_prediction_model(args):
-    batch_size = args.bs
+    link_prediction_batch_size = args.link_prediction_bs
+    workload_prediction_batch_size = args.workload_prediction_bs
     num_neighbors = args.n_degree
     num_neg = 1
     num_epoch = args.n_epoch
@@ -82,7 +83,7 @@ def train_workload_prediction_model(args):
         data_directory,
         train_file_start_idx,
         train_file_end_idx,
-        batch_size,
+        link_prediction_batch_size,
         ngh_finder,
         logger
     )
@@ -91,7 +92,7 @@ def train_workload_prediction_model(args):
         data_directory,
         valid_file_start_idx,
         valid_file_end_idx,
-        batch_size,
+        link_prediction_batch_size,
         ngh_finder,
         logger
     )
@@ -105,7 +106,7 @@ def train_workload_prediction_model(args):
         )
 
     workloads = get_filtered_workload_counts()
-    embedding_buffer = EmbeddingBuffer(n_past, n_nodes, memory_dim)
+    embedding_buffer = EmbeddingBuffer(n_past, n_nodes, memory_dim, workload_prediction_batch_size)
 
     # Set device
     if torch.cuda.is_available():
@@ -136,6 +137,12 @@ def train_workload_prediction_model(args):
         )
         Path(os.path.join(results_dir, "results/")).mkdir(parents=True, exist_ok=True)
 
+        preds_path = os.path.join(
+            results_dir,
+            "preds/{}_alibaba_node_classification_preds_{}.npy".format(args.prefix, i)
+        )
+        Path(os.path.join(results_dir, "preds/")).mkdir(parents=True, exist_ok=True)
+
         # Initialize Model
         tgn = TGN(neighbor_finder=ngh_finder, n_node_features=memory_dim, n_nodes=n_nodes,
                   n_edge_features=n_edge_features, device=device, n_layers=num_layer, n_heads=num_heads,
@@ -156,14 +163,17 @@ def train_workload_prediction_model(args):
         logger.info('TGN models loaded')
         logger.info('Start training node classification task')
 
-        # workload_predictor = WorkloadPredictionModel(n_past, n_future, memory_dim)
-        # workload_predictor_optimizer = torch.optim.Adam(workload_predictor.parameters(), lr=args.lr)
-        # workload_predictor = workload_predictor.to(device)
-        # workload_predictor_loss_criterion = torch.nn.L1Loss()
+        workload_predictor = WorkloadPredictionModel(n_past, n_future, memory_dim, n_nodes)
+        workload_predictor_optimizer = torch.optim.Adam(workload_predictor.parameters(), lr=args.lr)
+        workload_predictor = workload_predictor.to(device)
+        workload_predictor_loss_criterion = torch.nn.L1Loss()
 
-        val_aucs = []
+        val_maes = []
+        val_mses = []
+        val_r2s = []
         epoch_times = []
         train_losses = []
+        val_losses = []
         early_stopper = EarlyStopMonitor(max_round=args.patience)
 
         for epoch in range(args.n_epoch):
@@ -186,7 +196,6 @@ def train_workload_prediction_model(args):
             for batch in train_dataset:
                 sources_batch, destinations_batch, timestamps_batch, edge_idxs_batch, \
                     edge_features_batch, current_file_end = batch
-                size = len(sources_batch)
 
                 with torch.no_grad():
                     _, destination_embeddings, _ = tgn.compute_temporal_embeddings(sources_batch,
@@ -204,62 +213,89 @@ def train_workload_prediction_model(args):
                 embedding_buffer.add_embeddings(nodes_with_latest_indices[:, 0], latest_destination_embeddings)
 
                 if current_file_end:
-                    embedding_buffer.flush_embeddings_to_store()
-
                     current_minute_workloads = get_future_workloads(
                         np.arange(0, n_nodes),
                         current_minute,
                         workloads,
                         n_future
                     )
+                    embedding_buffer.flush_embeddings_to_store(current_minute, current_minute_workloads)
 
-                    # TODO: TRAIN THE MODEL
-                    # pred = workload_predictor(source_embedding).sigmoid()
-                    # decoder_loss = decoder_loss_criterion(pred, labels_batch_torch)
-                    # decoder_loss.backward()
-                    # decoder_optimizer.step()
-                    # loss += decoder_loss.item()
+                    if embedding_buffer.is_buffer_full():
+                        embeddings_batch, nodes_batch, workloads_batch, _ = embedding_buffer.get_batch()
+                        pred = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
+                        workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch)
+                        workload_predictor.backward()
+                        workload_predictor_optimizer.step()
+                        loss += workload_predictor_loss.item()
 
                     current_minute += 1
 
-        #     train_losses.append(loss / train_dataset.get_total_batches())
-        #
-        #     val_auc = eval_workload_prediction(
-        #         tgn=tgn,
-        #         workload_predictor=workload_predictor,
-        #         valid_dataset=valid_dataset,
-        #         n_neighbors=num_neighbors
-        #     )
-        #     val_aucs.append(val_auc)
-        #
-        #     epoch_time = time.time() - start_epoch
-        #     epoch_times.append(epoch_time)
-        #
-        #     pickle.dump({
-        #         "val_aps": val_aucs,
-        #         "train_losses": train_losses,
-        #         "epoch_times": epoch_times
-        #     }, open(results_path, "wb"))
-        #
-        #     logger.info(
-        #         f'Epoch {epoch}: train loss: {loss / train_dataset.get_total_batches()}, val auc: {val_auc}, time: {time.time() - start_epoch}')
-        #
-        # if args.use_validation:
-        #     if early_stopper.early_stop_check(val_auc):
-        #         logger.info('No improvement over {} epochs, stop training'.format(early_stopper.max_round))
-        #         break
-        #     else:
-        #         torch.save(workload_predictor.state_dict(), get_checkpoint_path(epoch))
-        #
-        # if args.use_validation:
-        #     logger.info(f'Loading the best model at epoch {early_stopper.best_epoch}')
-        #     best_model_path = get_checkpoint_path(early_stopper.best_epoch)
-        #     workload_predictor.load_state_dict(torch.load(best_model_path))
-        #     logger.info(f'Loaded the best model at epoch {early_stopper.best_epoch} for inference')
-        #     workload_predictor.eval()
-        #
-        # pickle.dump({
-        #     "val_aps": val_aucs,
-        #     "train_losses": train_losses,
-        #     "epoch_times": [0.0]
-        # }, open(results_path, "wb"))
+            embeddings_batch, nodes_batch, workloads_batch, _ = embedding_buffer.get_batch()
+            if embeddings_batch.shape[0] > 0:
+                pred = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
+                workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch)
+                workload_predictor.backward()
+                workload_predictor_optimizer.step()
+                loss += workload_predictor_loss.item()
+
+            train_losses.append(loss / train_dataset.get_total_batches())
+
+            val_mae, val_mse, val_r2, val_loss, workload_preds_epoch = eval_workload_prediction(
+                tgn=tgn,
+                workload_predictor=workload_predictor,
+                valid_dataset=valid_dataset,
+                embedding_buffer=embedding_buffer,
+                workloads=workloads,
+                loss_criterion=workload_predictor_loss_criterion,
+                start_minute=valid_file_start_idx,
+                n_nodes=n_nodes,
+                n_future=n_future,
+                n_neighbors=num_neighbors
+            )
+            val_maes.append(val_mae)
+            val_mses.append(val_mse)
+            val_r2s.append(val_r2)
+            val_losses.append(val_loss)
+
+            epoch_time = time.time() - start_epoch
+            epoch_times.append(epoch_time)
+
+            pickle.dump({
+                "val_maes": val_maes,
+                "val_mses": val_mses,
+                "val_r2s": val_r2s,
+                "train_losses": train_losses,
+                "val_losses": val_losses,
+                "epoch_times": epoch_times
+            }, open(results_path, "wb"))
+
+            pickle.dump(workload_preds_epoch, open(results_path, "wb"))
+
+            logger.info(
+                f'Epoch {epoch}: train loss: {loss / train_dataset.get_total_batches()}, val mae: {val_mae}, time: {time.time() - start_epoch}')
+
+            if early_stopper.early_stop_check(val_mae):
+                logger.info('No improvement over {} epochs, stop training'.format(early_stopper.max_round))
+                break
+            else:
+                torch.save(workload_predictor.state_dict(), get_checkpoint_path(epoch))
+
+        logger.info(f'Loading the best model at epoch {early_stopper.best_epoch}')
+        best_model_path = get_checkpoint_path(early_stopper.best_epoch)
+        workload_predictor.load_state_dict(torch.load(best_model_path))
+        logger.info(f'Loaded the best model at epoch {early_stopper.best_epoch} for inference')
+        workload_predictor.eval()
+
+        pickle.dump({
+            "val_maes": val_maes,
+            "val_mses": val_mses,
+            "val_r2s": val_r2s,
+            "train_losses": train_losses,
+            "val_losses": val_losses,
+            "epoch_times": [0.0]
+        }, open(results_path, "wb"))
+
+        logger.info('Saving Workload Prediction model')
+        torch.save(workload_predictor.state_dict(), model_save_path)
+        logger.info('Workload Prediction model saved')

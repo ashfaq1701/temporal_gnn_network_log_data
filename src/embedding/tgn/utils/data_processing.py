@@ -1,6 +1,5 @@
 import math
 import os
-import threading
 from concurrent.futures import ThreadPoolExecutor, Future
 
 import numpy as np

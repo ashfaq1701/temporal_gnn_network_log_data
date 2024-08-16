@@ -22,7 +22,7 @@ import neighbor_finder
 
 
 def train_link_prediction_model(args):
-    batch_size = args.bs
+    batch_size = args.link_prediction_bs
     num_neighbors = args.n_degree
     num_neg = 1
     num_epoch = args.n_epoch

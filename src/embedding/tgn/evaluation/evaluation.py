@@ -44,6 +44,7 @@ def eval_workload_prediction(
         valid_dataset,
         embedding_buffer,
         workloads,
+        device,
         loss_criterion,
         start_minute,
         n_nodes,
@@ -93,7 +94,9 @@ def eval_workload_prediction(
                 if embedding_buffer.is_buffer_full():
                     embeddings_batch, nodes_batch, workloads_batch, timesteps_batch = embedding_buffer.get_batch()
                     preds = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
-                    workload_predictor_loss = loss_criterion(preds, workloads_batch)
+
+                    workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+                    workload_predictor_loss = loss_criterion(preds, workloads_batch_tensor)
                     loss += workload_predictor_loss.item()
 
                     preds_np = preds.cpu().detach().numpy()
@@ -108,7 +111,9 @@ def eval_workload_prediction(
         embeddings_batch, nodes_batch, workloads_batch, timesteps_batch = embedding_buffer.get_batch()
         if embeddings_batch.shape[0] > 0:
             preds = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
-            workload_predictor_loss = loss_criterion(preds, workloads_batch)
+
+            workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+            workload_predictor_loss = loss_criterion(preds, workloads_batch_tensor)
             loss += workload_predictor_loss.item()
 
             preds_np = preds.cpu().detach().numpy()

@@ -344,7 +344,7 @@ if __name__ == "__main__":
 
     # TGN Arguments
     parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')
-    parser.add_argument('--workload_prediction_bs', type=int, default=2000, help='Workload Prediction Batch_size')
+    parser.add_argument('--workload_prediction_bs', type=int, default=1000, help='Workload Prediction Batch_size')
     parser.add_argument('--prefix', type=str, default='', help='Prefix to name the checkpoints')
     parser.add_argument('--n_degree', type=int, default=10, help='Number of neighbors to sample')
     parser.add_argument('--n_head', type=int, default=2, help='Number of heads used in attention layer')

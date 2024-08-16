@@ -49,8 +49,10 @@ def train_workload_prediction_model(args):
     Path(os.path.join(results_dir, "saved_models")).mkdir(parents=True, exist_ok=True)
     Path(os.path.join(results_dir, "saved_checkpoints")).mkdir(parents=True, exist_ok=True)
     model_save_path = os.path.join(results_dir, f'saved_models/{args.prefix}-alibaba-node-classification.pth')
-    get_checkpoint_path = lambda \
-            epoch: f'saved_checkpoints/{args.prefix}-alibaba-{epoch}-node-classification.pth'
+    get_checkpoint_path = lambda epoch: os.path.join(
+        results_dir,
+        f'saved_checkpoints/{args.prefix}-alibaba-{epoch}-node-classification.pth'
+    )
 
     ### set up logger
     logging.basicConfig(level=logging.INFO)
@@ -163,7 +165,7 @@ def train_workload_prediction_model(args):
         logger.info('TGN models loaded')
         logger.info('Start training node classification task')
 
-        workload_predictor = WorkloadPredictionModel(n_past, n_future, memory_dim, n_nodes)
+        workload_predictor = WorkloadPredictionModel(n_past, n_future, n_nodes, memory_dim, device)
         workload_predictor_optimizer = torch.optim.Adam(workload_predictor.parameters(), lr=args.lr)
         workload_predictor = workload_predictor.to(device)
         workload_predictor_loss_criterion = torch.nn.L1Loss()
@@ -189,6 +191,7 @@ def train_workload_prediction_model(args):
             embedding_buffer.reset_store()
 
             tgn = tgn.eval()
+            workload_predictor = workload_predictor.train()
             loss = 0
 
             current_minute = 0
@@ -224,8 +227,10 @@ def train_workload_prediction_model(args):
                     if embedding_buffer.is_buffer_full():
                         embeddings_batch, nodes_batch, workloads_batch, _ = embedding_buffer.get_batch()
                         pred = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
-                        workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch)
-                        workload_predictor.backward()
+
+                        workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+                        workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch_tensor)
+                        workload_predictor_loss.backward()
                         workload_predictor_optimizer.step()
                         loss += workload_predictor_loss.item()
 
@@ -234,8 +239,10 @@ def train_workload_prediction_model(args):
             embeddings_batch, nodes_batch, workloads_batch, _ = embedding_buffer.get_batch()
             if embeddings_batch.shape[0] > 0:
                 pred = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
-                workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch)
-                workload_predictor.backward()
+
+                workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+                workload_predictor_loss = workload_predictor_loss_criterion(pred, workloads_batch_tensor)
+                workload_predictor_loss.backward()
                 workload_predictor_optimizer.step()
                 loss += workload_predictor_loss.item()
 
@@ -247,6 +254,7 @@ def train_workload_prediction_model(args):
                 valid_dataset=valid_dataset,
                 embedding_buffer=embedding_buffer,
                 workloads=workloads,
+                device=device,
                 loss_criterion=workload_predictor_loss_criterion,
                 start_minute=valid_file_start_idx,
                 n_nodes=n_nodes,
@@ -270,7 +278,7 @@ def train_workload_prediction_model(args):
                 "epoch_times": epoch_times
             }, open(results_path, "wb"))
 
-            pickle.dump(workload_preds_epoch, open(results_path, "wb"))
+            pickle.dump(workload_preds_epoch, open(preds_path, "wb"))
 
             logger.info(
                 f'Epoch {epoch}: train loss: {loss / train_dataset.get_total_batches()}, val mae: {val_mae}, time: {time.time() - start_epoch}')

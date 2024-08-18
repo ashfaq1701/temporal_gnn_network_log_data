@@ -7,7 +7,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.embedding.train_self_supervised import train_link_prediction_model
-from src.embedding.train_supervised import train_workload_prediction_model
+from src.embedding.precompute_temporal_embedding import precompute_temporal_embedding
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
@@ -422,7 +422,7 @@ if __name__ == "__main__":
             compute_all_time_statistics_for_files()
         case 'train_link_prediction':
             train_link_prediction_model(args)
-        case 'train_workload_prediction':
-            train_workload_prediction_model(args)
+        case 'precompute_temporal_embedding':
+            precompute_temporal_embedding(args)
         case _:
             raise ValueError(f'Invalid task: {args.task}')

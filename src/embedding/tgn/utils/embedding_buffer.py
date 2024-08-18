@@ -4,59 +4,42 @@ import numpy as np
 
 
 class EmbeddingBuffer:
-    def __init__(self, n_past, n_nodes, embedding_dim, buffer_size):
-        self.n_past = n_past
+    def __init__(self, n_nodes, embedding_dim, buffer_size):
         self.n_nodes = n_nodes
         self.embedding_dim = embedding_dim
         self.buffer_size = buffer_size
-        self.embedding_store = []
-        self.current_embedding_store = {}
+        self.embedding_store = np.zeros((self.n_nodes, self.embedding_dim), dtype=np.float32)
         self.node_embedding_buffer = None
         self.node_id_buffer = None
-        self.workload_buffer = None
+        self.past_workload_buffer = None
+        self.future_workload_buffer = None
         self.timestep_buffer = None
-        self.init_store()
-
-    def init_store(self):
-        self.embedding_store = [deque(maxlen=self.n_past) for _ in range(self.n_nodes)]
-        for node in range(self.n_nodes):
-            for _ in range(self.n_past):
-                self.embedding_store[node].append(np.zeros(self.embedding_dim, dtype=np.float32))
 
     def add_embeddings(self, nodes, embeddings):
         for idx in range(len(nodes)):
-            self.current_embedding_store[nodes[idx]] = embeddings[idx, :]
+            self.embedding_store[nodes[idx], :] = embeddings[idx, :]
 
-    def flush_embeddings_to_store(self, current_timestep, current_timestep_workloads):
-        for node, embedding in self.current_embedding_store.items():
-            self.embedding_store[node].append(embedding)
-        self.current_embedding_store.clear()
-        self._add_to_buffer(current_timestep, current_timestep_workloads)
-
-    def _add_to_buffer(self, current_timestep, current_timestep_workloads):
-        merged_embeddings = []
-
-        for embeddings in self.embedding_store:
-            merged_embeddings.append(np.vstack(tuple(embeddings)))
-
-        merged_embeddings_np = np.array(merged_embeddings)
-        shuffled_indices = np.random.permutation(merged_embeddings_np.shape[0])
-        shuffled_embeddings = merged_embeddings_np[shuffled_indices, :, :]
-        shuffled_workloads = current_timestep_workloads[shuffled_indices, :]
+    def add_to_buffer(self, current_timestep, past_workloads, future_workloads):
+        shuffled_indices = np.random.permutation(self.n_nodes)
+        shuffled_embeddings = self.embedding_store[shuffled_indices, :]
+        shuffled_past_workloads = past_workloads[shuffled_indices, :]
+        shuffled_future_workloads = future_workloads[shuffled_indices, :]
         current_timestep_values = np.full(self.n_nodes, current_timestep)
 
         if self.node_embedding_buffer is not None:
-            self.node_embedding_buffer = np.concatenate(
-                (self.node_embedding_buffer, shuffled_embeddings),
-                axis=0
-            )
+            self.node_embedding_buffer = np.concatenate((self.node_embedding_buffer, shuffled_embeddings))
         else:
             self.node_embedding_buffer = shuffled_embeddings
 
-        if self.workload_buffer is not None:
-            self.workload_buffer = np.concatenate((self.workload_buffer, shuffled_workloads))
+        if self.past_workload_buffer is not None:
+            self.past_workload_buffer = np.concatenate((self.past_workload_buffer, shuffled_past_workloads))
         else:
-            self.workload_buffer = shuffled_workloads
+            self.past_workload_buffer = shuffled_past_workloads
+
+        if self.future_workload_buffer is not None:
+            self.future_workload_buffer = np.concatenate((self.future_workload_buffer, shuffled_future_workloads))
+        else:
+            self.future_workload_buffer = shuffled_future_workloads
 
         if self.node_id_buffer is not None:
             self.node_id_buffer = np.concatenate((self.node_id_buffer, shuffled_indices))
@@ -75,22 +58,24 @@ class EmbeddingBuffer:
         if self.node_embedding_buffer is None:
             return np.array([]), np.array([])
 
-        embedding_batch = self.node_embedding_buffer[:self.buffer_size, :, :]
+        embedding_batch = self.node_embedding_buffer[:self.buffer_size, :]
         nodes_batch = self.node_id_buffer[:self.buffer_size]
-        workload_batch = self.workload_buffer[:self.buffer_size]
+        past_workload_batch = self.past_workload_buffer[:self.buffer_size]
+        future_workload_batch = self.future_workload_buffer[:self.buffer_size]
         timestep_batch = self.timestep_buffer[:self.buffer_size]
 
-        self.node_embedding_buffer = self.node_embedding_buffer[self.buffer_size:, :, :]
+        self.node_embedding_buffer = self.node_embedding_buffer[self.buffer_size:, :]
         self.node_id_buffer = self.node_id_buffer[self.buffer_size:]
-        self.workload_buffer = self.workload_buffer[self.buffer_size:]
+        self.past_workload_buffer = self.past_workload_buffer[self.buffer_size:]
+        self.future_workload_buffer = self.future_workload_buffer[self.buffer_size:]
         self.timestep_buffer = self.timestep_buffer[self.buffer_size:]
 
-        return embedding_batch, nodes_batch, workload_batch, timestep_batch
+        return embedding_batch, nodes_batch, past_workload_batch, future_workload_batch, timestep_batch
 
     def reset_store(self):
-        self.init_store()
-        self.current_embedding_store.clear()
+        self.embedding_store = np.zeros((self.n_nodes, self.embedding_dim), dtype=np.float32)
         self.node_embedding_buffer = None
         self.node_id_buffer = None
-        self.workload_buffer = None
+        self.past_workload_buffer = None
+        self.future_workload_buffer = None
         self.timestep_buffer = None

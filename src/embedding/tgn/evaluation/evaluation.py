@@ -4,7 +4,7 @@ from sklearn.metrics import average_precision_score, roc_auc_score, \
     mean_absolute_error, mean_squared_error, r2_score
 
 from src.embedding.tgn.utils.utils import get_unique_latest_nodes_with_indices, get_future_workloads, \
-    combine_predictions
+    combine_predictions, get_past_workloads
 
 
 def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbors):
@@ -48,6 +48,7 @@ def eval_workload_prediction(
         loss_criterion,
         start_minute,
         n_nodes,
+        n_past,
         n_future,
         n_neighbors
 ):
@@ -83,24 +84,31 @@ def eval_workload_prediction(
             embedding_buffer.add_embeddings(nodes_with_latest_indices[:, 0], latest_destination_embeddings)
 
             if current_file_end:
-                current_minute_workloads = get_future_workloads(
+                past_workloads = get_past_workloads(
+                    np.arange(0, n_nodes),
+                    current_minute,
+                    workloads,
+                    n_past
+                )
+                future_workloads = get_future_workloads(
                     np.arange(0, n_nodes),
                     current_minute,
                     workloads,
                     n_future
                 )
-                embedding_buffer.flush_embeddings_to_store(current_minute, current_minute_workloads)
+                embedding_buffer.add_to_buffer(current_minute, past_workloads, future_workloads)
 
                 if embedding_buffer.is_buffer_full():
-                    embeddings_batch, nodes_batch, workloads_batch, timesteps_batch = embedding_buffer.get_batch()
+                    embeddings_batch, nodes_batch, past_workloads_batch, future_workloads_batch, timesteps_batch \
+                        = embedding_buffer.get_batch()
                     preds = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
 
-                    workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+                    workloads_batch_tensor = torch.tensor(future_workloads_batch, dtype=torch.float32).to(device)
                     workload_predictor_loss = loss_criterion(preds, workloads_batch_tensor)
                     loss += workload_predictor_loss.item()
 
                     preds_np = preds.cpu().detach().numpy()
-                    true_workloads = np.concatenate((true_workloads, workloads_batch), axis=0)
+                    true_workloads = np.concatenate((true_workloads, future_workloads_batch), axis=0)
                     pred_workloads = np.concatenate((pred_workloads, preds_np), axis=0)
 
                     nodes = np.concatenate((nodes, nodes_batch))
@@ -108,16 +116,17 @@ def eval_workload_prediction(
 
                 current_minute += 1
 
-        embeddings_batch, nodes_batch, workloads_batch, timesteps_batch = embedding_buffer.get_batch()
+        embeddings_batch, nodes_batch, past_workloads_batch, future_workloads_batch, timesteps_batch \
+            = embedding_buffer.get_batch()
         if embeddings_batch.shape[0] > 0:
             preds = workload_predictor.predict_workload(embeddings_batch, nodes_batch)
 
-            workloads_batch_tensor = torch.tensor(workloads_batch, dtype=torch.float32).to(device)
+            workloads_batch_tensor = torch.tensor(future_workloads_batch, dtype=torch.float32).to(device)
             workload_predictor_loss = loss_criterion(preds, workloads_batch_tensor)
             loss += workload_predictor_loss.item()
 
             preds_np = preds.cpu().detach().numpy()
-            true_workloads = np.concatenate((true_workloads, workloads_batch), axis=0)
+            true_workloads = np.concatenate((true_workloads, future_workloads_batch), axis=0)
             pred_workloads = np.concatenate((pred_workloads, preds_np), axis=0)
 
             nodes = np.concatenate((nodes, nodes_batch))

@@ -1,35 +1,13 @@
-import math
-
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
-from torch import nn
 
 
-class WorkloadPredictionModel(nn.Module):
-    def __init__(
-            self, m, n, n_nodes, d_embed, device, d_node_embed=128, nhead=4,
-            num_encoder_layers=3, dim_feedforward=2048, dropout=0.1
-    ):
-        super(WorkloadPredictionModel, self).__init__()
-
-        self.m = m
-        self.n = n
+class WorkloadPrediction(nn.Module):
+    def __init__(self, n_nodes, device):
+        super(WorkloadPrediction, self).__init__()
         self.n_nodes = n_nodes
         self.device = device
-
-        self.node_embedding = nn.Linear(n_nodes, d_node_embed)  # Project one-hot node vectors to embedding dimension
-        d_model = d_node_embed + d_embed
-
-        self.pos_encoder = PositionalEncoding(d_model, max_len=m)
-        encoder_layers = nn.TransformerEncoderLayer(
-            d_model=d_model,
-            nhead=nhead,
-            dim_feedforward=dim_feedforward,
-            dropout=dropout
-        )
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers=num_encoder_layers)
-
-        self.fc_out = nn.Linear(d_model, 1)
 
     def predict_workload(self, embeddings, nodes):
         embeddings_torch = torch.from_numpy(embeddings).to(self.device)
@@ -37,40 +15,35 @@ class WorkloadPredictionModel(nn.Module):
         nodes_one_hot = F.one_hot(nodes_torch, num_classes=self.n_nodes).float()
         return self(embeddings_torch, nodes_one_hot)
 
-    def forward(self, x_past, node_ids):
-        b, m, d = x_past.shape
 
-        node_embeddings = self.node_embedding(node_ids)  # Shape: (b, d_model)
-        node_embeddings = node_embeddings.unsqueeze(1).expand(-1, m, -1)  # Shape: (b, m, d_model)
+class WorkloadPredictionMLP(WorkloadPrediction):
+    def __init__(self, n_future, d_embedding, n_nodes, device, d_node_embedding=128, hidden_dim=256, dropout_prob=0.0):
+        super(WorkloadPredictionMLP, self).__init__(n_nodes, device)
 
-        x = torch.cat((x_past, node_embeddings), dim=2)  # Shape: (b, m, d_model)
+        self.node_embedding = nn.Linear(n_nodes, d_node_embedding)
 
-        x = self.pos_encoder(x)  # Shape: (b, m, d_model)
+        layers = [
+            nn.Linear(d_embedding + d_node_embedding, hidden_dim),
+            nn.ReLU(),
+        ]
 
-        # Pass through transformer encoder
-        x = x.permute(1, 0, 2)  # Change to (seq_len, batch_size, d_model)
-        transformer_output = self.transformer_encoder(x)  # Shape: (seq_len, batch_size, d_model + embedding_dim)
-        transformer_output = transformer_output.permute(1, 0, 2)  # Change back to (batch_size, seq_len, d_model)
+        if dropout_prob > 0.0:
+            layers.append(nn.Dropout(dropout_prob))
 
-        y_pred = self.fc_out(transformer_output)  # Shape: (b, m, output_dim)
+        layers.extend([
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+        ])
 
-        y_pred = y_pred[:, -self.n:, :]  # Shape: (b, n, output_dim)
+        if dropout_prob > 0.0:
+            layers.append(nn.Dropout(dropout_prob))
 
-        return y_pred.squeeze()
+        layers.append(nn.Linear(hidden_dim, n_future))
 
+        self.mlp = nn.Sequential(*layers)
 
-class PositionalEncoding(nn.Module):
-    def __init__(self, d_model, max_len=5000):
-        super(PositionalEncoding, self).__init__()
-
-        pe = torch.zeros(max_len, d_model)
-        position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
-        self.register_buffer('pe', pe)
-
-    def forward(self, x):
-        return x + self.pe[:, :x.size(1), :]
+    def forward(self, x, nodes):
+        node_emb = self.node_embedding(nodes)
+        x = torch.cat([x, node_emb], dim=1)
+        output = self.mlp(x)
+        return output

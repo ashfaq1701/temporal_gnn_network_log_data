@@ -61,7 +61,7 @@ def precompute_temporal_embedding(args):
     full_dataset = CombinedPandasDatasetFromDirectory(
         data_directory,
         0,
-        20160,
+        20_160,
         link_prediction_batch_size,
         ngh_finder,
         logger
@@ -150,6 +150,6 @@ def precompute_temporal_embedding(args):
             current_minute += 1
 
     embedding_dir = os.getenv('EMBEDDING_DIR')
-    pickle.dump(embeddings_over_time, open(os.path.join(embedding_dir, 'embeddings_over_time'), "wb"))
-    pickle.dump(past_workloads, open(os.path.join(embedding_dir, 'past_workloads_over_time'), "wb"))
-    pickle.dump(future_workloads, open(os.path.join(embedding_dir, 'future_workloads_over_time'), "wb"))
+    pickle.dump(embeddings_over_time, open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), "wb"))
+    pickle.dump(past_workloads, open(os.path.join(embedding_dir, 'past_workloads_over_time.pickle'), "wb"))
+    pickle.dump(future_workloads, open(os.path.join(embedding_dir, 'future_workloads_over_time.pickle'), "wb"))

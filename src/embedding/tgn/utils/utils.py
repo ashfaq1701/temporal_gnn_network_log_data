@@ -119,18 +119,18 @@ def get_future_workloads(nodes, curr_minute, workloads, n_future):
 
 
 def get_past_workloads(nodes, curr_minute, workloads, n_past):
-    future_workloads = workloads[nodes, curr_minute - n_past + 1:curr_minute + 1]
-    padding_width = n_past - future_workloads.shape[1]
+    past_workloads = workloads[nodes, max(curr_minute - n_past + 1, 0):curr_minute + 1]
+    padding_width = n_past - past_workloads.shape[1]
 
     if padding_width > 0:
         padded_array = np.pad(
-            future_workloads,
+            past_workloads,
             pad_width=((0, 0), (0, padding_width)),
             mode='constant',
             constant_values=0.0
         )
     else:
-        padded_array = future_workloads
+        padded_array = past_workloads
     return padded_array
 
 

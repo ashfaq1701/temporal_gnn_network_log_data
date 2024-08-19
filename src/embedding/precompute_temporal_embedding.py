@@ -113,21 +113,26 @@ def precompute_temporal_embedding(args):
             edge_features_batch, current_file_end = batch
 
         with torch.no_grad():
-            _, destination_embeddings, _ = tgn.compute_temporal_embeddings(sources_batch,
-                                                                           destinations_batch,
-                                                                           destinations_batch,
-                                                                           timestamps_batch,
-                                                                           edge_idxs_batch,
-                                                                           num_neighbors)
+            source_embeddings, destination_embeddings, _ = tgn.compute_temporal_embeddings(sources_batch,
+                                                                                           destinations_batch,
+                                                                                           destinations_batch,
+                                                                                           timestamps_batch,
+                                                                                           edge_idxs_batch,
+                                                                                           num_neighbors)
+            source_embeddings_np = source_embeddings.detach().cpu().numpy()
             destination_embeddings_np = destination_embeddings.detach().cpu().numpy()
+            all_embeddings = np.concatenate((destination_embeddings_np, source_embeddings_np))
 
         full_dataset.add_batch_to_neighbor_finder(batch[:-1])
 
-        nodes_with_latest_indices = get_unique_latest_nodes_with_indices(destinations_batch, timestamps_batch)
-        latest_destination_embeddings = destination_embeddings_np[nodes_with_latest_indices[:, 1]]
+        nodes_with_latest_indices = get_unique_latest_nodes_with_indices(
+            np.concatenate((destinations_batch, sources_batch)),
+            np.concatenate((timestamps_batch, timestamps_batch))
+        )
+        latest_node_embeddings = all_embeddings[nodes_with_latest_indices[:, 1]]
         nodes = nodes_with_latest_indices[:, 0]
         for idx in range(len(nodes)):
-            embedding_buffer[nodes[idx], :] = latest_destination_embeddings[idx, :]
+            embedding_buffer[nodes[idx], :] = latest_node_embeddings[idx, :]
 
         if current_file_end:
             past_workloads_current_minute = get_past_workloads(

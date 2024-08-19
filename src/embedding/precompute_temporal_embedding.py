@@ -10,8 +10,7 @@ import torch
 
 from src.embedding.tgn.model.tgn import TGN
 from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
-from src.embedding.tgn.utils.utils import get_unique_latest_nodes_with_indices, get_future_workloads, \
-    get_past_workloads
+from src.embedding.tgn.utils.utils import get_unique_latest_nodes_with_indices, get_workloads_at_time
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
 from src.preprocess.functions import get_edge_feature_count, get_filtered_workload_counts, get_filtered_node_counts
 
@@ -29,8 +28,6 @@ def precompute_temporal_embedding(args):
     use_memory = args.use_memory
     message_dim = args.message_dim
     memory_dim = args.memory_dim
-    n_past = args.n_past
-    n_future = args.n_future
 
     results_dir = os.getenv('RESULTS_DIR')
 
@@ -92,8 +89,7 @@ def precompute_temporal_embedding(args):
 
     embedding_buffer = np.zeros((n_nodes, memory_dim), dtype=np.float32)
     embeddings_over_time = []
-    past_workloads = []
-    future_workloads = []
+    workloads_by_minutes = []
 
     tgn = TGN(neighbor_finder=ngh_finder, n_node_features=memory_dim, n_nodes=n_nodes,
               n_edge_features=n_edge_features, device=device, n_layers=num_layer, n_heads=num_heads,
@@ -135,26 +131,17 @@ def precompute_temporal_embedding(args):
             embedding_buffer[nodes[idx], :] = latest_node_embeddings[idx, :]
 
         if current_file_end:
-            past_workloads_current_minute = get_past_workloads(
+            workloads_current_minute = get_workloads_at_time(
                 np.arange(0, n_nodes),
                 current_minute,
-                workloads,
-                n_past
-            )
-            future_workloads_current_minute = get_future_workloads(
-                np.arange(0, n_nodes),
-                current_minute,
-                workloads,
-                n_future
+                workloads
             )
 
             embeddings_over_time.append(embedding_buffer.copy())
-            past_workloads.append(past_workloads_current_minute)
-            future_workloads.append(future_workloads_current_minute)
+            workloads_by_minutes.append(workloads_current_minute)
 
             current_minute += 1
 
     embedding_dir = os.getenv('EMBEDDING_DIR')
     pickle.dump(embeddings_over_time, open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), "wb"))
-    pickle.dump(past_workloads, open(os.path.join(embedding_dir, 'past_workloads_over_time.pickle'), "wb"))
-    pickle.dump(future_workloads, open(os.path.join(embedding_dir, 'future_workloads_over_time.pickle'), "wb"))
+    pickle.dump(workloads_by_minutes, open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), "wb"))

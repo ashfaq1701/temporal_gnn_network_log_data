@@ -339,8 +339,9 @@ if __name__ == "__main__":
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
     parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
 
-    parser.add_argument('--n_past', type=int, default=5, help='Number of past timesteps to predict from.')
-    parser.add_argument('--n_future', type=int, default=3, help='Number of future timesteps to predict')
+    parser.add_argument('--seq_len', type=int, default=12, help='Number of past timesteps to predict from.')
+    parser.add_argument('--label_len', type=int, default=6, help='Number of future timesteps to predict')
+    parser.add_argument('--pred_len', type=int, default=3, help='Number of future timesteps to predict')
 
     # TGN Arguments
     parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')

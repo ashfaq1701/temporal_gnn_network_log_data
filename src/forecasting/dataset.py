@@ -16,15 +16,17 @@ class WorkloadPredictionDataset(Dataset):
             train_end_minute,
             valid_start_minute,
             valid_end_minute,
-            sizes,
+            seq_len,
+            label_len,
+            pred_len,
             node_id=None
     ):
         self.n_nodes = n_nodes
         self.node_id = node_id
 
-        self.seq_len = sizes[0]
-        self.label_len = sizes[1]
-        self.pred_len = sizes[2]
+        self.seq_len = seq_len
+        self.label_len = label_len
+        self.pred_len = pred_len
 
         if node_id is None:
             self.n_features = n_nodes + n_nodes * d_embed
@@ -66,7 +68,7 @@ class WorkloadPredictionDataset(Dataset):
             labels_in_current_timestep = np.array([])
 
             for node_id in node_ids:
-                workload = np.array(workloads[timestep][node_id])
+                workload = np.array([workloads[timestep][node_id]])
                 embedding = embeddings[timestep][node_id, :]
 
                 features_in_current_timestep = np.concatenate((features_in_current_timestep, workload, embedding))
@@ -76,6 +78,9 @@ class WorkloadPredictionDataset(Dataset):
             self.all_labels = np.vstack([self.all_labels, labels_in_current_timestep])
 
     def __getitem__(self, index):
+        if index >= self.__len__():
+            raise IndexError('No more data')
+
         s_begin = index
         s_end = s_begin + self.seq_len
         r_begin = s_end - self.label_len

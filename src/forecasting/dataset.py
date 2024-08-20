@@ -54,7 +54,6 @@ class WorkloadPredictionDataset(Dataset):
 
         self.all_timesteps = np.expand_dims(np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32), axis=1)
 
-        self.all_data = self.workload_scaler.fit_transform(self.all_data)
         self.all_timesteps = self.timestep_scaler.fit_transform(self.all_timesteps)
 
         if is_train:
@@ -79,17 +78,19 @@ class WorkloadPredictionDataset(Dataset):
         with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
             workloads = pickle.load(f)
 
+        scaled_workloads = self.workload_scaler.fit_transform(workloads)
+
         node_ids = [self.node_id] if self.node_id is not None else list(range(self.n_nodes))
 
-        self.all_data = np.zeros((len(workloads), self.n_features), dtype=np.float32)
-        self.all_labels = np.zeros((len(workloads), self.n_labels), dtype=np.float32)
+        self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
+        self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
 
         for timestep in range(len(embeddings)):
             col_idx_data = 0
             col_idx_labels = 0
 
             for node_id in node_ids:
-                workload = workloads[timestep][node_id]
+                workload = scaled_workloads[timestep][node_id]
                 embedding = embeddings[timestep][node_id, :]
 
                 self.all_data[timestep, col_idx_data] = workload
@@ -114,7 +115,13 @@ class WorkloadPredictionDataset(Dataset):
         seq_x = self.data[s_begin:s_end]
         seq_y = self.labels[r_begin:r_end]
 
-        return seq_x, seq_y
+        seq_x_mark = self.timesteps[s_begin:s_end]
+        seq_y_mark = self.timesteps[r_begin:r_end]
+
+        return seq_x, seq_y, seq_x_mark, seq_y_mark
 
     def __len__(self):
         return len(self.data) - self.seq_len - self.pred_len + 1
+
+    def inverse_transform(self, data):
+        return self.workload_scaler.inverse_transform(data)

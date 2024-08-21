@@ -127,9 +127,19 @@ class WorkloadPredictionDataset(Dataset):
         original_shape = data.shape
         if data.ndim > 2:
             data = data.reshape(-1, original_shape[-1])
-            transformed = self.workload_scaler.inverse_transform(data).reshape(original_shape)
+            width = data.shape[1]
+
+            if width != self.n_nodes:
+                data_broadcasted = np.repeat(data, self.n_nodes, axis=1)
+                transformed_broadcasted = self.workload_scaler.inverse_transform(data_broadcasted)
+                transformed = transformed_broadcasted[:, :width]
+            else:
+                transformed = self.workload_scaler.inverse_transform(data)
+
+            transformed = transformed.reshape(original_shape)
         else:
             transformed = self.workload_scaler.inverse_transform(data)
+
         return transformed
 
     def get_feature_and_label_count(self):

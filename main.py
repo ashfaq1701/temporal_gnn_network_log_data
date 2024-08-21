@@ -393,8 +393,10 @@ if __name__ == "__main__":
     parser.add_argument('--seq_len', type=int, default=12, help='Number of past timesteps to predict from.')
     parser.add_argument('--label_len', type=int, default=6, help='Number of future timesteps to predict')
     parser.add_argument('--pred_len', type=int, default=3, help='Number of future timesteps to predict')
-    parser.add_argument('--workload_pred_train_days', type=int, default=10, help='Training days in workload prediction')
-    parser.add_argument('--workload_pred_valid_days', type=int, default=4, help='Validation days in workload prediction')
+    parser.add_argument('--workload_pred_train_days', type=int, default=8, help='Training days in workload prediction')
+    parser.add_argument('--workload_pred_valid_days', type=int, default=3, help='Validation days in workload prediction')
+    parser.add_argument('--workload_pred_test_days', type=int, default=3, help='Test days in workload prediction')
+
     parser.add_argument('--checkpoints', type=str, default='checkpoints/', help='location of model checkpoints')
 
     parser.add_argument('--d_model', type=int, default=512, help='dimension of model')

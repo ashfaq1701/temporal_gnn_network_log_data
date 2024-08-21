@@ -14,11 +14,13 @@ class WorkloadPredictionDataset(Dataset):
             self,
             n_nodes,
             d_embed,
-            is_train,
+            dataset,
             train_start_minute,
             train_end_minute,
             valid_start_minute,
             valid_end_minute,
+            test_start_minute,
+            test_end_minute,
             seq_len,
             label_len,
             pred_len,
@@ -56,12 +58,17 @@ class WorkloadPredictionDataset(Dataset):
         all_timesteps = np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32)
         self.all_timesteps = time_encode(all_timesteps)
 
-        if is_train:
+        if dataset == 'train':
             start_minute = train_start_minute
             end_minute = train_end_minute
-        else:
+        elif dataset == 'valid':
             start_minute = valid_start_minute
             end_minute = valid_end_minute
+        elif dataset == 'test':
+            start_minute = test_start_minute
+            end_minute = test_end_minute
+        else:
+            raise ValueError(f'Invalid dataset name {dataset}')
 
         self.data = self.all_data[start_minute:end_minute, :]
         self.labels = self.all_labels[start_minute:end_minute, :]

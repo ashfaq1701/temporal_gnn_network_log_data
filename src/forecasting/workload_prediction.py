@@ -8,21 +8,21 @@ from torch.utils.data import DataLoader
 
 from src.forecasting.informer.data.dataset import WorkloadPredictionDataset
 from src.forecasting.informer.models.model import Informer, InformerStack
+from src.forecasting.informer.utils.metrics import metric
 from src.forecasting.informer.utils.tools import EarlyStopping, adjust_learning_rate
-from src.preprocess.functions import get_filtered_node_label_encoder, get_filtered_nodes_count
-from src.utils import get_training_and_validation_file_indices
+from src.preprocess.functions import get_filtered_nodes_count
+from src.utils import get_target_microservice_id, get_training_validation_and_test_file_indices
 
 
 def predict_workload(args, ignore_temporal_embedding, result_path, only_use_target_microservice):
-    target_microservice = os.getenv('WORKLOAD_PREDICTION_TARGET_MICROSERVICE')
-    label_encoder = get_filtered_node_label_encoder()
-    target_microservice_id = label_encoder.transform([target_microservice])[0]
+    target_microservice_id = get_target_microservice_id()
 
     training_days = args.workload_pred_train_days
     validation_days = args.workload_pred_valid_days
+    test_days = args.workload_pred_test_days
 
-    (train_start_minute, train_end_minute), (valid_start_minute, valid_end_minute) = \
-        get_training_and_validation_file_indices(training_days, validation_days)
+    (train_start, train_end), (valid_start, valid_end), (test_start, test_end) = \
+        get_training_validation_and_test_file_indices(training_days, validation_days, test_days)
 
     node_count = get_filtered_nodes_count()
     d_embedding = args.memory_dim
@@ -40,10 +40,12 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
 
     workload_prediction = WorkloadTimeSeriesPrediction(
         args=args,
-        train_start=train_start_minute,
-        train_end=train_end_minute,
-        valid_start=valid_start_minute,
-        valid_end=valid_end_minute,
+        train_start=train_start,
+        train_end=train_end,
+        valid_start=valid_start,
+        valid_end=valid_end,
+        test_start=test_start,
+        test_end=test_end,
         node_count=node_count,
         d_embedding=d_embedding,
         use_temporal_embedding=not ignore_temporal_embedding,
@@ -67,6 +69,8 @@ class WorkloadTimeSeriesPrediction:
             train_end,
             valid_start,
             valid_end,
+            test_start,
+            test_end,
             node_count,
             d_embedding,
             use_temporal_embedding,
@@ -81,11 +85,13 @@ class WorkloadTimeSeriesPrediction:
         self.train_ds = WorkloadPredictionDataset(
             n_nodes=node_count,
             d_embed=d_embedding,
-            is_train=True,
+            dataset="train",
             train_start_minute=train_start,
             train_end_minute=train_end,
             valid_start_minute=valid_start,
             valid_end_minute=valid_end,
+            test_start_minute=test_start,
+            test_end_minute=test_end,
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
@@ -96,11 +102,30 @@ class WorkloadTimeSeriesPrediction:
         self.valid_ds = WorkloadPredictionDataset(
             n_nodes=node_count,
             d_embed=d_embedding,
-            is_train=False,
+            dataset="valid",
             train_start_minute=train_start,
             train_end_minute=train_end,
             valid_start_minute=valid_start,
             valid_end_minute=valid_end,
+            test_start_minute=test_start,
+            test_end_minute=test_end,
+            seq_len=args.seq_len,
+            label_len=args.label_len,
+            pred_len=args.pred_len,
+            use_temporal_embedding=use_temporal_embedding,
+            node_id=target_node_id
+        )
+
+        self.test_ds = WorkloadPredictionDataset(
+            n_nodes=node_count,
+            d_embed=d_embedding,
+            dataset="test",
+            train_start_minute=train_start,
+            train_end_minute=train_end,
+            valid_start_minute=valid_start,
+            valid_end_minute=valid_end,
+            test_start_minute=test_start,
+            test_end_minute=test_end,
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
@@ -132,7 +157,7 @@ class WorkloadTimeSeriesPrediction:
                 self.args.factor,
                 self.args.d_model,
                 self.args.n_heads,
-                e_layers,  # self.args.e_layers,
+                e_layers,
                 self.args.d_layers,
                 self.args.d_ff,
                 self.args.dropout,
@@ -149,7 +174,11 @@ class WorkloadTimeSeriesPrediction:
             return model
 
     def _get_data(self, flag):
-        if flag == 'pred':
+        if flag == 'test':
+            shuffle_flag = False
+            drop_last = True
+            batch_size = self.args.batch_size
+        elif flag == 'pred':
             shuffle_flag = False
             drop_last = False
             batch_size = 1
@@ -160,15 +189,18 @@ class WorkloadTimeSeriesPrediction:
 
         if flag == 'train':
             dataset = self.train_ds
-        else:
+        elif flag == 'valid':
             dataset = self.valid_ds
+        else:
+            dataset = self.test_ds
 
         data_loader = DataLoader(
             dataset,
             batch_size=batch_size,
             shuffle=shuffle_flag,
             num_workers=self.args.num_workers,
-            drop_last=drop_last)
+            drop_last=drop_last
+        )
 
         return dataset, data_loader
 
@@ -196,6 +228,7 @@ class WorkloadTimeSeriesPrediction:
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
         vali_data, vali_loader = self._get_data(flag='val')
+        test_data, test_loader = self._get_data(flag='test')
 
         path = os.path.join(self.output_dir, self.args.checkpoints, setting)
         if not os.path.exists(path):
@@ -247,12 +280,13 @@ class WorkloadTimeSeriesPrediction:
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
+            test_loss = self.vali(test_data, test_loader, criterion)
 
             train_losses.append(train_loss)
             valid_losses.append(vali_loss)
 
-            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
-                epoch + 1, train_steps, train_loss, vali_loss
+            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
+                epoch + 1, train_steps, train_loss, vali_loss, test_loss
             ))
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
@@ -261,16 +295,51 @@ class WorkloadTimeSeriesPrediction:
 
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 
-        best_model_path = path + '/' + 'checkpoint.pth'
+        best_model_path = os.path.join(path, 'checkpoint.pth')
         self.model.load_state_dict(torch.load(best_model_path))
 
         folder_path = os.path.join(self.output_dir, 'results', setting)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        np.save(folder_path + '/' + 'losses.npy', {'train': train_losses, 'valid': valid_losses})
+        np.save(os.path.join(folder_path, 'losses.npy'), {'train': train_losses, 'valid': valid_losses})
 
         return self.model
+
+    def test(self, setting):
+        test_data, test_loader = self._get_data(flag='test')
+
+        self.model.eval()
+
+        preds = []
+        trues = []
+
+        for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
+            pred, true = self._process_one_batch(
+                test_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+            preds.append(pred.detach().cpu().numpy())
+            trues.append(true.detach().cpu().numpy())
+
+        preds = np.array(preds)
+        trues = np.array(trues)
+        print('test shape:', preds.shape, trues.shape)
+        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+        print('test shape:', preds.shape, trues.shape)
+
+        # result save
+        folder_path = os.path.join(self.output_dir, 'results/', setting)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        mae, mse, rmse, mape, mspe = metric(preds, trues)
+        print('mse:{}, mae:{}'.format(mse, mae))
+
+        np.save(os.path.join(folder_path, 'metrics.npy'), np.array([mae, mse, rmse, mape, mspe]))
+        np.save(os.path.join(folder_path, 'pred.npy'), preds)
+        np.save(os.path.join(folder_path, 'true.npy'), trues)
+
+        return
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
@@ -298,7 +367,7 @@ class WorkloadTimeSeriesPrediction:
             os.makedirs(folder_path)
 
         preds_inverted = pred_data.inverse_transform(preds)
-        np.save(folder_path + '/' + 'real_prediction.npy', preds_inverted)
+        np.save(os.path.join(folder_path, 'real_prediction.npy'), preds_inverted)
 
         return
 

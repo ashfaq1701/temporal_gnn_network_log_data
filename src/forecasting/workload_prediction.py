@@ -209,6 +209,8 @@ class WorkloadTimeSeriesPrediction:
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
 
+        train_losses, valid_losses = [], []
+
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
@@ -246,6 +248,9 @@ class WorkloadTimeSeriesPrediction:
             train_loss = np.average(train_loss)
             vali_loss = self.vali(vali_data, vali_loader, criterion)
 
+            train_losses.append(train_loss)
+            valid_losses.append(vali_loss)
+
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss
             ))
@@ -258,6 +263,12 @@ class WorkloadTimeSeriesPrediction:
 
         best_model_path = path + '/' + 'checkpoint.pth'
         self.model.load_state_dict(torch.load(best_model_path))
+
+        folder_path = os.path.join(self.output_dir, 'results', setting)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        np.save(folder_path + '/' + 'losses.npy', {'train': train_losses, 'valid': valid_losses})
 
         return self.model
 

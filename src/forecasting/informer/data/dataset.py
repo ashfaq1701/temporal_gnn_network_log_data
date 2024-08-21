@@ -88,7 +88,7 @@ class WorkloadPredictionDataset(Dataset):
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
 
         for timestep in range(len(embeddings)):
-            workload_current_time = workloads[timestep, node_ids]
+            workload_current_time = scaled_workloads[timestep, node_ids]
             embeddings_current_time = embeddings[timestep, node_ids, :].flatten()
 
             if self.use_temporal_embedding:

@@ -57,6 +57,9 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
     print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
     workload_prediction.train(setting)
 
+    print('>>>>>>>start testing : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
+    workload_prediction.test(setting)
+
     print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
     workload_prediction.predict(setting, True)
 

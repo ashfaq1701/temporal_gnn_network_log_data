@@ -116,3 +116,39 @@ def get_test_workloads():
 
     test_workloads_for_target = workloads[test_start_minute:, target_microservice_id]
     return test_workloads_for_target
+
+
+def get_valid_workloads():
+    target_microservice_id = get_target_microservice_id()
+
+    embedding_dir = os.getenv('EMBEDDING_DIR')
+
+    with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
+        workloads = pickle.load(f)
+        workloads = np.array(workloads)
+
+    training_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
+    validation_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
+
+    valid_start_minute = training_days * 24 * 60
+    test_start_minute = training_days * 24 * 60 + validation_days * 24 * 60
+
+    valid_workloads_for_target = workloads[valid_start_minute:test_start_minute, target_microservice_id]
+    return valid_workloads_for_target
+
+
+def get_train_workloads():
+    target_microservice_id = get_target_microservice_id()
+
+    embedding_dir = os.getenv('EMBEDDING_DIR')
+
+    with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
+        workloads = pickle.load(f)
+        workloads = np.array(workloads)
+
+    training_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
+
+    train_end_minute = training_days * 24 * 60
+
+    train_workloads_for_target = workloads[:train_end_minute, target_microservice_id]
+    return train_workloads_for_target

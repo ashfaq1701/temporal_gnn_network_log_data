@@ -2,6 +2,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.utils import get_test_workloads, get_target_microservice_id, get_train_workloads, get_valid_workloads
+
 
 def plot_microservice_workload(microservice, workloads):
     time_points = range(len(workloads))
@@ -18,9 +20,6 @@ def plot_microservice_workload(microservice, workloads):
 
     plt.xticks(days * minutes_per_day, day_labels)
     plt.show()
-
-
-from src.utils import get_test_workloads, get_target_microservice_id
 
 
 def get_pred_and_true_workloads(filepath, take_first=True):
@@ -74,6 +73,35 @@ def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True
 
     plt.plot(x_plot, true_workloads, label='True Workloads', color='red')
     plt.plot(x_plot, pred_workloads, label='Predicted Workloads', color='blue', linestyle='--')
+
+    plt.xlabel('Day')
+    plt.ylabel('Workload (Calls Per Minute)')
+    plt.xticks(days * minutes_per_day, day_labels)
+    plt.title(title)
+    plt.legend()
+    plt.savefig(save_filepath)
+
+
+def plot_full_workloads(filepath, title, save_filepath, take_first=True):
+    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first)
+
+    train_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
+    valid_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
+
+    train_workloads = get_train_workloads()
+    valid_workloads = get_valid_workloads()
+    test_workloads = get_test_workloads()
+
+    minutes_per_day = 1440
+    days = np.arange(0, 15)
+    day_labels = [str(day + train_days + valid_days) for day in days]
+
+    plt.figure(figsize=(14, 7))
+
+    plt.plot(range(len(train_workloads)), train_workloads, label="Train Workloads", color="green")
+    plt.plot(range(len(train_workloads), len(train_workloads) + len(valid_workloads)), valid_workloads, label="Valid Workloads", color="purple")
+    plt.plot(range(len(train_workloads) + len(valid_workloads), 20160), test_workloads, label='Test Workloads', color='red')
+    plt.plot(range(20160 - len(pred_workloads), 20160), pred_workloads, label='Predicted Workloads', color='blue', linestyle='--')
 
     plt.xlabel('Day')
     plt.ylabel('Workload (Calls Per Minute)')

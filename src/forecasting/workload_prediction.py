@@ -15,7 +15,10 @@ from src.utils import get_target_microservice_id, get_training_validation_and_te
 
 
 def predict_workload(args, ignore_temporal_embedding, result_path, only_use_target_microservice):
-    target_microservice_id = get_target_microservice_id()
+    if args.microservice_id is None:
+        target_microservice_id = get_target_microservice_id()
+    else:
+        target_microservice_id = args.microservice_id
 
     training_days = args.workload_pred_train_days
     validation_days = args.workload_pred_valid_days

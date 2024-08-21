@@ -2,12 +2,11 @@ import argparse
 import concurrent.futures
 import os
 import pickle
-import sys
 
 from dotenv import load_dotenv
 
-from src.embedding.train_self_supervised import train_link_prediction_model
 from src.embedding.precompute_temporal_embedding import precompute_temporal_embedding
+from src.embedding.train_self_supervised import train_link_prediction_model
 from src.forecasting.workload_prediction import predict_workload
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
@@ -341,6 +340,7 @@ if __name__ == "__main__":
     parser.add_argument('--output_dir', type=str, help='Directory to store the workload prediction outputs.')
     parser.add_argument('--ignore_temporal_embedding', action='store_true', help='Should we use temporal embedding for workload prediction?')
     parser.add_argument('--only_use_target_microservice', action='store_true', help='Should we use only the target microservice for workload prediction?')
+    parser.add_argument('--microservice_id', type=int, help='If needs to be run on a specific microservice')
 
     # TGN Arguments
     parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')

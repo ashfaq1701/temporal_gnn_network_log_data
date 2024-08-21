@@ -74,11 +74,9 @@ class WorkloadPredictionDataset(Dataset):
 
         with open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), 'rb') as f:
             embeddings = pickle.load(f)
-            embeddings = np.array(embeddings)
 
         with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
             workloads = pickle.load(f)
-            workloads = np.array(workloads)
 
         scaled_workloads = self.workload_scaler.fit_transform(workloads)
 
@@ -88,16 +86,22 @@ class WorkloadPredictionDataset(Dataset):
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
 
         for timestep in range(len(embeddings)):
-            workload_current_time = scaled_workloads[timestep, node_ids]
-            embeddings_current_time = embeddings[timestep, node_ids, :].flatten()
+            col_idx_data = 0
+            col_idx_labels = 0
 
-            if self.use_temporal_embedding:
-                merged_data = np.concatenate((workload_current_time, embeddings_current_time))
-            else:
-                merged_data = workload_current_time
+            for node_id in node_ids:
+                workload = scaled_workloads[timestep][node_id]
+                embedding = embeddings[timestep][node_id, :]
 
-            self.all_data[timestep, :] = merged_data
-            self.all_labels[timestep, :] = workload_current_time
+                self.all_data[timestep, col_idx_data] = workload
+                col_idx_data += 1
+
+                if self.use_temporal_embedding:
+                    self.all_data[timestep, col_idx_data:col_idx_data + self.embedding_width] = embedding
+                    col_idx_data += self.embedding_width
+
+                self.all_labels[timestep, col_idx_labels] = workload
+                col_idx_labels += 1
 
     def __getitem__(self, index):
         if index >= self.__len__():

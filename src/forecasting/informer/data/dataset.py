@@ -124,7 +124,13 @@ class WorkloadPredictionDataset(Dataset):
         return len(self.data) - self.seq_len - self.pred_len + 1
 
     def inverse_transform(self, data):
-        return self.workload_scaler.inverse_transform(data)
+        if data.ndim <= 2:
+            return self.workload_scaler.inverse_transform(data)
+        else:
+            transformed = []
+            for i in range(data.shape[0]):
+                transformed.append(self.workload_scaler.inverse_transform(data[i, :, :]))
+            return np.array(transformed)
 
     def get_feature_and_label_count(self):
         return self.n_features, self.n_labels

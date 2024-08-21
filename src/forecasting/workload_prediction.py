@@ -280,14 +280,14 @@ class WorkloadTimeSeriesPrediction:
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        print(preds.shape)
 
         # result save
         folder_path = os.path.join(self.output_dir, 'results/', setting)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        np.save(folder_path + '/' + 'real_prediction.npy', preds)
+        preds_inverted = pred_data.inverse_transform(preds)
+        np.save(folder_path + '/' + 'real_prediction.npy', preds_inverted)
 
         return
 

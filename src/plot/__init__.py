@@ -94,7 +94,7 @@ def plot_full_workloads(filepath, title, save_filepath, take_first=True):
 
     minutes_per_day = 1440
     days = np.arange(0, 15)
-    day_labels = [str(day + train_days + valid_days) for day in days]
+    day_labels = [str(day) for day in np.arange(0, 15)]
 
     plt.figure(figsize=(14, 7))
 

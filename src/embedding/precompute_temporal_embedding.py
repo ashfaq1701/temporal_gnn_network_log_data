@@ -12,7 +12,7 @@ from src.embedding.tgn.model.tgn import TGN
 from src.embedding.tgn.utils.data_processing import CombinedPandasDatasetFromDirectory
 from src.embedding.tgn.utils.utils import get_unique_latest_nodes_with_indices, get_workloads_at_time
 from src.preprocess.compute_time_statistics import compute_time_shifts_for_n_days
-from src.preprocess.functions import get_edge_feature_count, get_filtered_workload_counts, get_filtered_node_counts
+from src.preprocess.functions import get_edge_feature_count, get_filtered_workload_counts, get_filtered_nodes_count
 
 sys.path.append(os.path.abspath('./build'))
 import neighbor_finder
@@ -64,7 +64,7 @@ def precompute_temporal_embedding(args):
         logger
     )
 
-    n_nodes = get_filtered_node_counts()
+    n_nodes = get_filtered_nodes_count()
 
     workloads = get_filtered_workload_counts()
 

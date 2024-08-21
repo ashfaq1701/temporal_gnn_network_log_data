@@ -5,6 +5,8 @@ import numpy as np
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 
+from src.forecasting.informer.utils.timefeatures import time_encode
+
 
 class WorkloadPredictionDataset(Dataset):
 
@@ -31,7 +33,6 @@ class WorkloadPredictionDataset(Dataset):
         self.pred_len = pred_len
 
         self.workload_scaler = StandardScaler()
-        self.timestep_scaler = StandardScaler()
 
         self.use_temporal_embedding = use_temporal_embedding
 
@@ -52,9 +53,8 @@ class WorkloadPredictionDataset(Dataset):
 
         self._load_data()
 
-        self.all_timesteps = np.expand_dims(np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32), axis=1)
-
-        self.all_timesteps = self.timestep_scaler.fit_transform(self.all_timesteps)
+        all_timesteps = np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32)
+        self.all_timesteps = time_encode(all_timesteps)
 
         if is_train:
             start_minute = train_start_minute
@@ -125,3 +125,6 @@ class WorkloadPredictionDataset(Dataset):
 
     def inverse_transform(self, data):
         return self.workload_scaler.inverse_transform(data)
+
+    def get_feature_and_label_count(self):
+        return self.n_features, self.n_labels

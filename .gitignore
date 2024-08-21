@@ -16,3 +16,5 @@ data/raw_files/*
 !data/raw_files/.gitkeep
 data/tmp/*
 !data/tmp/.gitkeep
+CMakeFiles/w
+CMakeCache.txt

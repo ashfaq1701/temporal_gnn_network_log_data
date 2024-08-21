@@ -216,6 +216,6 @@ def get_filtered_workload_counts():
     return np.array(workloads)
 
 
-def get_filtered_node_counts():
+def get_filtered_nodes_count():
     filtered_label_encoder = get_filtered_node_label_encoder()
     return len(filtered_label_encoder.classes_)

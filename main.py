@@ -8,6 +8,7 @@ from dotenv import load_dotenv
 
 from src.embedding.train_self_supervised import train_link_prediction_model
 from src.embedding.precompute_temporal_embedding import precompute_temporal_embedding
+from src.forecasting.workload_prediction import predict_workload
 from src.preprocess.aggregate_dataframe import aggregate_dataframe, get_stats
 from src.preprocess.aggregate_filtered_dataframe import aggregate_filtered_dataframe
 from src.preprocess.compute_graph import compute_downstream_graph_for_file
@@ -337,7 +338,9 @@ if __name__ == "__main__":
     parser.add_argument('--end_hour', type=int, help='The end hour.')
     parser.add_argument('--start_index', type=int, help='Index of starting file.')
     parser.add_argument('--end_index', type=int, help='Index of ending file.')
-    parser.add_argument('--checkpoints', type=int, nargs='+', help='Checkpoints to store time statistics.')
+    parser.add_argument('--output_dir', type=str, help='Directory to store the workload prediction outputs.')
+    parser.add_argument('--ignore_temporal_embedding', action='store_true', help='Should we use temporal embedding for workload prediction?')
+    parser.add_argument('--only_use_target_microservice', action='store_true', help='Should we use only the target microservice for workload prediction?')
 
     # TGN Arguments
     parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')
@@ -348,7 +351,6 @@ if __name__ == "__main__":
     parser.add_argument('--n_epoch', type=int, default=50, help='Number of epochs')
     parser.add_argument('--n_layer', type=int, default=1, help='Number of network layers')
     parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
-    parser.add_argument('--patience', type=int, default=5, help='Patience for early stopping')
     parser.add_argument('--n_runs', type=int, default=1, help='Number of runs')
     parser.add_argument('--drop_out', type=float, default=0.1, help='Dropout probability')
     parser.add_argument('--gpu', type=int, default=0, help='Idx for the gpu to use')
@@ -385,11 +387,44 @@ if __name__ == "__main__":
                         help='Whether to run the dyrep model')
 
     # Informer arguments
+    parser.add_argument('--model', type=str, default='informer',
+                        help='model of experiment, options: [informer, informerstack, informerlight(TBD)]')
+
     parser.add_argument('--seq_len', type=int, default=12, help='Number of past timesteps to predict from.')
     parser.add_argument('--label_len', type=int, default=6, help='Number of future timesteps to predict')
     parser.add_argument('--pred_len', type=int, default=3, help='Number of future timesteps to predict')
     parser.add_argument('--workload_pred_train_days', type=int, default=10, help='Training days in workload prediction')
     parser.add_argument('--workload_pred_valid_days', type=int, default=4, help='Validation days in workload prediction')
+    parser.add_argument('--checkpoints', type=str, default='checkpoints/', help='location of model checkpoints')
+
+    parser.add_argument('--d_model', type=int, default=512, help='dimension of model')
+    parser.add_argument('--n_heads', type=int, default=8, help='num of heads')
+    parser.add_argument('--e_layers', type=int, default=2, help='num of encoder layers')
+    parser.add_argument('--d_layers', type=int, default=1, help='num of decoder layers')
+    parser.add_argument('--s_layers', type=str, default='3,2,1', help='num of stack encoder layers')
+    parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
+    parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
+    parser.add_argument('--padding', type=int, default=0, help='padding type')
+    parser.add_argument('--distil', action='store_false',
+                        help='whether to use distilling in encoder, using this argument means not using distilling',
+                        default=True)
+    parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
+    parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
+    parser.add_argument('--embed', type=str, default='timeF',
+                        help='time features encoding, options:[timeF, fixed, learned]')
+    parser.add_argument('--activation', type=str, default='gelu', help='activation')
+
+    parser.add_argument('--output_attention', action='store_true', help='whether to output attention in ecoder')
+    parser.add_argument('--mix', action='store_false', help='use mix attention in generative decoder', default=True)
+    parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
+    parser.add_argument('--train_epochs', type=int, default=6, help='train epochs')
+    parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
+    parser.add_argument('--patience', type=int, default=3, help='early stopping patience')
+    parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
+    parser.add_argument('--loss', type=str, default='mse', help='loss function')
+    parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
+    parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
+
 
     # Parse the command-line arguments
     args = parser.parse_args()
@@ -428,5 +463,7 @@ if __name__ == "__main__":
             train_link_prediction_model(args)
         case 'precompute_temporal_embedding':
             precompute_temporal_embedding(args)
+        case 'predict_workload':
+            predict_workload(args, args.ignore_temporal_embedding, args.output_dir, args.only_use_target_microservice)
         case _:
             raise ValueError(f'Invalid task: {args.task}')

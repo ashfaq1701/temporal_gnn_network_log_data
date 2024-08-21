@@ -2,9 +2,9 @@ import os
 import pickle
 
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset
 
+from src.forecasting.informer.data.custom_std_scaler import CustomStandardScaler
 from src.forecasting.informer.utils.timefeatures import time_encode
 
 
@@ -32,7 +32,7 @@ class WorkloadPredictionDataset(Dataset):
         self.label_len = label_len
         self.pred_len = pred_len
 
-        self.workload_scaler = StandardScaler()
+        self.workload_scaler = CustomStandardScaler()
 
         self.use_temporal_embedding = use_temporal_embedding
 
@@ -77,6 +77,7 @@ class WorkloadPredictionDataset(Dataset):
 
         with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
             workloads = pickle.load(f)
+            workloads = np.array(workloads)
 
         scaled_workloads = self.workload_scaler.fit_transform(workloads)
 
@@ -124,23 +125,7 @@ class WorkloadPredictionDataset(Dataset):
         return len(self.data) - self.seq_len - self.pred_len + 1
 
     def inverse_transform(self, data):
-        original_shape = data.shape
-        if data.ndim > 2:
-            data = data.reshape(-1, original_shape[-1])
-            width = data.shape[1]
-
-            if width != self.n_nodes:
-                data_broadcasted = np.repeat(data, self.n_nodes, axis=1)
-                transformed_broadcasted = self.workload_scaler.inverse_transform(data_broadcasted)
-                transformed = transformed_broadcasted[:, :width]
-            else:
-                transformed = self.workload_scaler.inverse_transform(data)
-
-            transformed = transformed.reshape(original_shape)
-        else:
-            transformed = self.workload_scaler.inverse_transform(data)
-
-        return transformed
+        return self.workload_scaler.inverse_transform(data)
 
     def get_feature_and_label_count(self):
         return self.n_features, self.n_labels

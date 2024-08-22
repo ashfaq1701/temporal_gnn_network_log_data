@@ -101,6 +101,16 @@ def get_target_microservice_id():
     return target_microservice_id
 
 
+def get_workloads_for_specific_microservice(microservice_id):
+    embedding_dir = os.getenv('EMBEDDING_DIR')
+
+    with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
+        workloads = pickle.load(f)
+        workloads = np.array(workloads)
+
+    return workloads[:, microservice_id]
+
+
 def get_test_workloads():
     target_microservice_id = get_target_microservice_id()
 

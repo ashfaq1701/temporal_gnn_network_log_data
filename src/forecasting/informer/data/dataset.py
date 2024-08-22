@@ -81,14 +81,16 @@ class WorkloadPredictionDataset(Dataset):
 
         with open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), 'rb') as f:
             embeddings = pickle.load(f)
+            embeddings = np.array(embeddings)
 
         with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
             workloads = pickle.load(f)
             workloads = np.array(workloads)
 
-        scaled_workloads = self.workload_scaler.fit_transform(workloads)
-
         node_ids = [self.node_id] if self.node_id is not None else list(range(self.n_nodes))
+
+        selected_embeddings = embeddings[:, node_ids, :]
+        scaled_workloads = self.workload_scaler.fit_transform(workloads[:, node_ids])
 
         self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
@@ -97,9 +99,9 @@ class WorkloadPredictionDataset(Dataset):
             col_idx_data = 0
             col_idx_labels = 0
 
-            for node_id in node_ids:
-                workload = scaled_workloads[timestep][node_id]
-                embedding = embeddings[timestep][node_id, :]
+            for i in range(len(node_ids)):
+                workload = scaled_workloads[timestep][i]
+                embedding = selected_embeddings[timestep, i, :]
 
                 self.all_data[timestep, col_idx_data] = workload
                 col_idx_data += 1

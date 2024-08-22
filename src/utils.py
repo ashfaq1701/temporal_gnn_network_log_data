@@ -111,8 +111,11 @@ def get_workloads_for_specific_microservice(microservice_id):
     return workloads[:, microservice_id]
 
 
-def get_test_workloads():
-    target_microservice_id = get_target_microservice_id()
+def get_test_workloads(microservice_id=None):
+    if microservice_id is None:
+        target_microservice_id = get_target_microservice_id()
+    else:
+        target_microservice_id = microservice_id
 
     embedding_dir = os.getenv('EMBEDDING_DIR')
 
@@ -128,8 +131,11 @@ def get_test_workloads():
     return test_workloads_for_target
 
 
-def get_valid_workloads():
-    target_microservice_id = get_target_microservice_id()
+def get_valid_workloads(microservice_id=None):
+    if microservice_id is None:
+        target_microservice_id = get_target_microservice_id()
+    else:
+        target_microservice_id = microservice_id
 
     embedding_dir = os.getenv('EMBEDDING_DIR')
 
@@ -147,8 +153,11 @@ def get_valid_workloads():
     return valid_workloads_for_target
 
 
-def get_train_workloads():
-    target_microservice_id = get_target_microservice_id()
+def get_train_workloads(microservice_id=None):
+    if microservice_id is None:
+        target_microservice_id = get_target_microservice_id()
+    else:
+        target_microservice_id = microservice_id
 
     embedding_dir = os.getenv('EMBEDDING_DIR')
 

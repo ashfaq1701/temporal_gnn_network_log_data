@@ -22,9 +22,14 @@ def plot_microservice_workload(microservice, workloads):
     plt.show()
 
 
-def get_pred_and_true_workloads(filepath, take_first=True):
+def get_pred_and_true_workloads(filepath, take_first=True, microservice_id=None):
     test_workloads = get_test_workloads()
-    target_microservice_id = get_target_microservice_id()
+
+    if microservice_id is not None:
+        target_microservice_id = microservice_id
+    else:
+        target_microservice_id = get_target_microservice_id()
+
     preds = np.load(filepath)
     pred_len = preds.shape[0] + preds.shape[1] - 1
     selected_test_workloads = test_workloads[-pred_len:]
@@ -52,8 +57,8 @@ def get_pred_and_true_workloads(filepath, take_first=True):
     return pred_workloads, selected_test_workloads
 
 
-def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True):
-    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first)
+def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True, microservice_id=None):
+    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first, microservice_id)
 
     train_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
     valid_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
@@ -84,9 +89,6 @@ def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True
 
 def plot_full_workloads(filepath, title, save_filepath, take_first=True):
     pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first)
-
-    train_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
-    valid_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
 
     train_workloads = get_train_workloads()
     valid_workloads = get_valid_workloads()

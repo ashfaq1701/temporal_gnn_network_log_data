@@ -87,8 +87,8 @@ def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True
     plt.savefig(save_filepath)
 
 
-def plot_full_workloads(filepath, title, save_filepath, take_first=True):
-    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first)
+def plot_full_workloads(filepath, title, save_filepath, take_first=True, microservice_id=None):
+    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first, microservice_id)
 
     train_workloads = get_train_workloads()
     valid_workloads = get_valid_workloads()

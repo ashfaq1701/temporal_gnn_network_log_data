@@ -74,10 +74,10 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
         results.append((model, losses_i, metrics_i, preds_i, trues_i, test_preds_inverted_i))
         mses.append(metrics_i[1])
 
-    max_idx = np.argmax(mses)
-    model, losses, metrics, preds, trues, test_preds_inverted = results[max_idx]
+    min_idx = np.argmin(mses)
+    model, losses, metrics, preds, trues, test_preds_inverted = results[min_idx]
 
-    print(f'Best Run {max_idx}. MAE: {metrics[0]}, MSE: {metrics[1]}, RMSE: {metrics[2]}, MAPE: {metrics[3]}, MSPE: {metrics[4]}')
+    print(f'Best Run {min_idx}. MAE: {metrics[0]}, MSE: {metrics[1]}, RMSE: {metrics[2]}, MAPE: {metrics[3]}, MSPE: {metrics[4]}')
 
     folder_path = os.path.join(result_path, 'results/', setting)
     if not os.path.exists(folder_path):

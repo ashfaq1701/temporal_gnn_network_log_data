@@ -1,4 +1,5 @@
 import os
+import pickle
 import time
 
 import numpy as np
@@ -41,30 +42,52 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
         args.e_layers, args.d_layers, args.d_ff, args.attn, args.factor, args.embed, args.distil, args.mix
     )
 
-    workload_prediction = WorkloadTimeSeriesPrediction(
-        args=args,
-        train_start=train_start,
-        train_end=train_end,
-        valid_start=valid_start,
-        valid_end=valid_end,
-        test_start=test_start,
-        test_end=test_end,
-        node_count=node_count,
-        d_embedding=d_embedding,
-        use_temporal_embedding=not ignore_temporal_embedding,
-        device=device,
-        output_dir=result_path,
-        target_node_id=target_microservice_id if only_use_target_microservice else None
-    )
+    results = []
+    mses = []
 
-    print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
-    workload_prediction.train(setting)
+    for run in range(args.n_runs):
+        workload_prediction = WorkloadTimeSeriesPrediction(
+            args=args,
+            train_start=train_start,
+            train_end=train_end,
+            valid_start=valid_start,
+            valid_end=valid_end,
+            test_start=test_start,
+            test_end=test_end,
+            node_count=node_count,
+            d_embedding=d_embedding,
+            use_temporal_embedding=not ignore_temporal_embedding,
+            device=device,
+            output_dir=result_path,
+            target_node_id=target_microservice_id if only_use_target_microservice else None
+        )
 
-    print('>>>>>>>start testing : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
-    workload_prediction.test(setting)
+        print('>>>>>>>start training {} : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(run, setting))
+        model, losses_i = workload_prediction.train(setting)
 
-    print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-    workload_prediction.predict(setting, True)
+        print('>>>>>>>start testing {} : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(run, setting))
+        metrics_i, preds_i, trues_i = workload_prediction.test(setting)
+
+        print('>>>>>>>predicting {} : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(run, setting))
+        test_preds_inverted_i = workload_prediction.predict(setting, True)
+
+        results.append((model, losses_i, metrics_i, preds_i, trues_i, test_preds_inverted_i))
+        mses.append(metrics_i[1])
+
+    max_idx = np.argmax(mses)
+    model, losses, metrics, preds, trues, test_preds_inverted = results[max_idx]
+
+    folder_path = os.path.join(result_path, 'results/', setting)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    torch.save(model.state_dict(), os.path.join(folder_path, 'model.pth'))
+    with open(os.path.join(folder_path, 'losses.pickle'), 'wb') as f:
+        pickle.dump(losses, f)
+    np.save(os.path.join(folder_path, 'metrics.npy'), metrics)
+    np.save(os.path.join(folder_path, 'pred.npy'), preds)
+    np.save(os.path.join(folder_path, 'true.npy'), trues)
+    np.save(os.path.join(folder_path, 'real_prediction.npy'), test_preds_inverted)
 
 
 class WorkloadTimeSeriesPrediction:
@@ -253,6 +276,7 @@ class WorkloadTimeSeriesPrediction:
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
+
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []
@@ -304,13 +328,9 @@ class WorkloadTimeSeriesPrediction:
         best_model_path = os.path.join(path, 'checkpoint.pth')
         self.model.load_state_dict(torch.load(best_model_path))
 
-        folder_path = os.path.join(self.output_dir, 'results', setting)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+        losses = {'train': train_losses, 'valid': valid_losses}
 
-        np.save(os.path.join(folder_path, 'losses.npy'), {'train': train_losses, 'valid': valid_losses})
-
-        return self.model
+        return self.model, losses
 
     def test(self, setting):
         test_data, test_loader = self._get_data(flag='test')
@@ -333,19 +353,10 @@ class WorkloadTimeSeriesPrediction:
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
-        # result save
-        folder_path = os.path.join(self.output_dir, 'results/', setting)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('mse:{}, mae:{}'.format(mse, mae))
 
-        np.save(os.path.join(folder_path, 'metrics.npy'), np.array([mae, mse, rmse, mape, mspe]))
-        np.save(os.path.join(folder_path, 'pred.npy'), preds)
-        np.save(os.path.join(folder_path, 'true.npy'), trues)
-
-        return
+        return np.array([mae, mse, rmse, mape, mspe]), preds, trues
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
@@ -366,16 +377,8 @@ class WorkloadTimeSeriesPrediction:
 
         preds = np.array(preds)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-
-        # result save
-        folder_path = os.path.join(self.output_dir, 'results/', setting)
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
-
         preds_inverted = pred_data.inverse_transform(preds)
-        np.save(os.path.join(folder_path, 'real_prediction.npy'), preds_inverted)
-
-        return
+        return preds_inverted
 
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
         batch_x = batch_x.float().to(self.device)

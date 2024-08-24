@@ -77,6 +77,8 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
     max_idx = np.argmax(mses)
     model, losses, metrics, preds, trues, test_preds_inverted = results[max_idx]
 
+    print(f'Best Run {max_idx}. MAE: {metrics[0]}, MSE: {metrics[1]}, RMSE: {metrics[2]}, MAPE: {metrics[3]}, MSPE: {metrics[4]}')
+
     folder_path = os.path.join(result_path, 'results/', setting)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)

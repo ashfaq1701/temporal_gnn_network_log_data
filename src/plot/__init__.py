@@ -76,20 +76,23 @@ def plot_pred_and_true_workloads(filepath, title, save_filepath, take_first=True
 
     plt.figure(figsize=(14, 7))
 
-    plt.plot(x_plot, true_workloads, label='True Workloads', color='red')
-    plt.plot(x_plot, pred_workloads, label='Predicted Workloads', color='blue', linestyle='--')
+    plt.plot(x_plot, true_workloads, label='True Workloads', color='teal')
+    plt.plot(x_plot, pred_workloads, label='Predicted Workloads', color='coral', linestyle='--')
 
-    plt.xlabel('Day')
-    plt.ylabel('Workload (Calls Per Minute)')
+    plt.xlabel('Day', fontsize=12, fontweight='bold')
+    plt.ylabel('CPM', fontsize=12, fontweight='bold')
     plt.xticks(days * minutes_per_day, day_labels)
-    plt.title(title)
-    plt.legend()
-    plt.savefig(save_filepath)
+    plt.title(title, fontsize=14, fontweight='bold')
+
+    plt.legend(loc='upper right', fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.savefig(save_filepath, bbox_inches='tight')
+
 
 
 def plot_full_workloads(filepath, title, save_filepath, take_first=True, microservice_id=None):
     pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first, microservice_id)
-
     train_workloads = get_train_workloads(microservice_id)
     valid_workloads = get_valid_workloads(microservice_id)
     test_workloads = get_test_workloads(microservice_id)
@@ -100,14 +103,21 @@ def plot_full_workloads(filepath, title, save_filepath, take_first=True, microse
 
     plt.figure(figsize=(14, 7))
 
-    plt.plot(range(len(train_workloads)), train_workloads, label="Train Workloads", color="green")
-    plt.plot(range(len(train_workloads), len(train_workloads) + len(valid_workloads)), valid_workloads, label="Valid Workloads", color="purple")
-    plt.plot(range(len(train_workloads) + len(valid_workloads), 20160), test_workloads, label='Test Workloads', color='red')
-    plt.plot(range(20160 - len(pred_workloads), 20160), pred_workloads, label='Predicted Workloads', color='blue', linestyle='--')
+    plt.plot(range(len(train_workloads)), train_workloads, label="Train Workloads", color="green", linestyle='-')
+    plt.plot(range(len(train_workloads), len(train_workloads) + len(valid_workloads)), valid_workloads,
+             label="Valid Workloads", color="purple", linestyle='-')
+    plt.plot(range(len(train_workloads) + len(valid_workloads), 20160), test_workloads, label='Test Workloads',
+             color='teal', linestyle='-')
+    plt.plot(range(20160 - len(pred_workloads), 20160), pred_workloads, label='Predicted Workloads', color='coral',
+             linestyle='--')
 
-    plt.xlabel('Day')
-    plt.ylabel('Workload (Calls Per Minute)')
+    plt.xlabel('Day', fontsize=12, fontweight='bold')
+    plt.ylabel('CPM', fontsize=12, fontweight='bold')
     plt.xticks(days * minutes_per_day, day_labels)
-    plt.title(title)
-    plt.legend()
-    plt.savefig(save_filepath)
+    plt.title(title, fontsize=14, fontweight='bold')
+
+    plt.legend(loc='upper right', fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.savefig(save_filepath, bbox_inches='tight')
+

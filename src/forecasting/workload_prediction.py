@@ -278,7 +278,6 @@ class WorkloadTimeSeriesPrediction:
         if self.args.use_amp:
             scaler = torch.cuda.amp.GradScaler()
 
-
         for epoch in range(self.args.train_epochs):
             iter_count = 0
             train_loss = []

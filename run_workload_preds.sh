@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Disable Python buffering
+export PYTHONUNBUFFERED=1
+
 # Check if microservice_id is passed as a parameter
 if [ -z "$1" ]; then
   echo "Usage: $0 <microservice_id>"

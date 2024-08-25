@@ -105,7 +105,7 @@ def precompute_temporal_embedding(args):
     model_path = os.path.join(results_dir, f'saved_models/{args.prefix}-alibaba.pth')
     tgn.load_state_dict(torch.load(model_path))
     tgn.eval()
-    logger.info('TGN models loaded and eval mode started.')
+    logger.info(f'TGN models loaded from {model_path} and eval mode started.')
 
     current_minute = 0
 

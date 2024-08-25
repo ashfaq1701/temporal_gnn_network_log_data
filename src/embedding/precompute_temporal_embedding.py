@@ -102,6 +102,11 @@ def precompute_temporal_embedding(args):
               use_source_embedding_in_message=args.use_source_embedding_in_message)
     tgn = tgn.to(device)
 
+    model_path = os.path.join(results_dir, f'saved_models/{args.prefix}-alibaba.pth')
+    tgn.load_state_dict(torch.load(model_path))
+    tgn.eval()
+    logger.info('TGN models loaded and eval mode started.')
+
     current_minute = 0
 
     for batch in full_dataset:

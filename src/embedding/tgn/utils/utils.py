@@ -95,10 +95,10 @@ def get_node_features(source_nodes, n_node_features):
 def get_unique_latest_nodes_with_indices(nodes, timestamps):
     data = np.vstack((nodes, timestamps)).T
     sorted_indices = np.lexsort((-data[:, 1], data[:, 0]))
-    merged_array = np.column_stack((data, sorted_indices))
-    sorted_data = merged_array[sorted_indices]
-    unique_values, first_occurrence_indices = np.unique(sorted_data[:, 0], return_index=True)
-    unique_latest_values = sorted_data[first_occurrence_indices]
+    sorted_data = data[sorted_indices]
+    merged_array = np.column_stack((sorted_data, sorted_indices))
+    unique_values, first_occurrence_indices = np.unique(merged_array[:, 0], return_index=True)
+    unique_latest_values = merged_array[first_occurrence_indices]
     return unique_latest_values[:, [0, 2]]
 
 

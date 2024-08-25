@@ -1,9 +1,6 @@
 import numpy as np
 import torch
-from sklearn.metrics import average_precision_score, roc_auc_score, \
-    mean_absolute_error, mean_squared_error, r2_score
-
-from src.embedding.tgn.utils.utils import get_unique_latest_nodes_with_indices
+from sklearn.metrics import average_precision_score, roc_auc_score
 
 
 def eval_edge_prediction(model, negative_edge_sampler, valid_dataset, n_neighbors):

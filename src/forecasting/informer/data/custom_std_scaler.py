@@ -7,8 +7,11 @@ class CustomStandardScaler:
         self.std = None
 
     def fit(self, data):
-        self.mean = np.mean(data)
-        self.std = np.std(data)
+        self.mean = data.mean(0)
+
+        self.std = data.std(0)
+        self.std[self.std == 0] = 1
+
 
     def transform(self, data):
         if self.mean is None:

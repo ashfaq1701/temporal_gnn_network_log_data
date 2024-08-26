@@ -148,8 +148,8 @@ class WorkloadPredictionDataset(Dataset):
         return self.n_features, self.n_labels
 
     def _scale_temporal_embeddings(self, workloads, temporal_embeddings):
-        target_max = self.temporal_embedding_relative_scale_factor * np.max(workloads)
-        max_value_embedding = np.max(temporal_embeddings)
+        target_max = self.temporal_embedding_relative_scale_factor * np.max(np.abs(workloads))
+        max_value_embedding = np.max(np.abs(temporal_embeddings))
 
         scaling_factor = target_max / max_value_embedding
         scaled_embeddings = temporal_embeddings * scaling_factor

@@ -95,8 +95,6 @@ class WorkloadPredictionDataset(Dataset):
         self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
 
-        print(self.use_temporal_embedding)
-
         for timestep in range(len(embeddings)):
             col_idx_data = 0
             col_idx_labels = 0

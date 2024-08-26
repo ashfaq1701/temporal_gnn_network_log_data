@@ -24,7 +24,6 @@ class WorkloadPredictionDataset(Dataset):
             seq_len,
             label_len,
             pred_len,
-            temporal_embedding_scaling_factor,
             use_temporal_embedding=True,
             node_id=None
     ):
@@ -34,8 +33,6 @@ class WorkloadPredictionDataset(Dataset):
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
-
-        self.temporal_embedding_scaling_factor = temporal_embedding_scaling_factor
 
         self.workload_scaler = CustomStandardScaler()
         self.embedding_scaler = CustomStandardScaler()
@@ -96,7 +93,7 @@ class WorkloadPredictionDataset(Dataset):
         embeddings = embeddings[:, node_ids, :]
         workloads = workloads[:, node_ids]
 
-        scaled_embeddings = self.temporal_embedding_scaling_factor * self.embedding_scaler.fit_transform(embeddings)
+        scaled_embeddings = self.embedding_scaler.fit_transform(embeddings)
         scaled_workloads = self.workload_scaler.fit_transform(workloads)
 
         self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)

@@ -96,9 +96,8 @@ class WorkloadPredictionDataset(Dataset):
         selected_embeddings = embeddings[:, node_ids, :]
         selected_workloads = workloads[:, node_ids]
 
-        scaled_embeddings = self.embedding_scaler.fit_transform(selected_embeddings)
         scaled_workloads = self.workload_scaler.fit_transform(selected_workloads)
-        scaled_embeddings = self._scale_temporal_embeddings(scaled_workloads, scaled_embeddings)
+        scaled_embeddings = self.scale_embeddings(selected_embeddings)
 
         self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
@@ -147,10 +146,8 @@ class WorkloadPredictionDataset(Dataset):
     def get_feature_and_label_count(self):
         return self.n_features, self.n_labels
 
-    def _scale_temporal_embeddings(self, workloads, temporal_embeddings):
-        target_max = self.temporal_embedding_relative_scale_factor * np.max(workloads)
-        max_value_embedding = np.max(temporal_embeddings)
-
-        scaling_factor = target_max / max_value_embedding
-        scaled_embeddings = temporal_embeddings * scaling_factor
-        return scaled_embeddings
+    @staticmethod
+    def scale_embeddings(embeddings):
+        max_abs_val = np.max(np.abs(embeddings))
+        max_abs_val = max_abs_val if max_abs_val != 0 else 1
+        return embeddings / max_abs_val

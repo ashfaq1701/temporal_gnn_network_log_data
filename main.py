@@ -426,7 +426,7 @@ if __name__ == "__main__":
     parser.add_argument('--loss', type=str, default='mse', help='loss function')
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
-    parser.add_argument('--temporal_embedding_scaling_factor', type=float, default=0.01, help='Scaling factor for temporal embeddings')
+    parser.add_argument('--temporal_embedding_scaling_factor', type=float, default=0.005, help='Scaling factor for temporal embeddings')
 
     # Parse the command-line arguments
     args = parser.parse_args()

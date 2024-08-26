@@ -35,6 +35,7 @@ class WorkloadPredictionDataset(Dataset):
         self.pred_len = pred_len
 
         self.workload_scaler = CustomStandardScaler()
+        self.embedding_scaler = CustomStandardScaler()
 
         self.use_temporal_embedding = use_temporal_embedding
 
@@ -87,10 +88,13 @@ class WorkloadPredictionDataset(Dataset):
             workloads = pickle.load(f)
             workloads = np.array(workloads)
 
+        embeddings = self.embedding_scaler.fit_transform(embeddings)
+        workloads = self.workload_scaler.fit_transform(workloads)
+
         node_ids = [self.node_id] if self.node_id is not None else list(range(self.n_nodes))
 
         selected_embeddings = embeddings[:, node_ids, :]
-        scaled_workloads = self.workload_scaler.fit_transform(workloads[:, node_ids])
+        scaled_workloads = workloads[:, node_ids]
 
         self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
         self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)

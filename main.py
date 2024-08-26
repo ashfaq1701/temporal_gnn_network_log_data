@@ -427,8 +427,6 @@ if __name__ == "__main__":
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
-    parser.add_argument('--temporal_embeddings_relative_scale_factor', type=float, default=0.005, help='factor to scale temporal embeddings')
-
     # Parse the command-line arguments
     args = parser.parse_args()
 

@@ -2,7 +2,7 @@ import numpy as np
 
 
 class CustomStandardScaler:
-    def __init__(self, per_feature=False):
+    def __init__(self, per_feature):
         self.per_feature = per_feature
         self.mean = None
         self.std = None

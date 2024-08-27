@@ -427,7 +427,7 @@ if __name__ == "__main__":
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
-    parser.add_argument('--embedding_type', type=str, default='max_abs', help='Type of embedding scaling, either none, std or max_abs')
+    parser.add_argument('--embedding_type', type=str, default='max', help='Type of embedding scaling, either none, std or max')
     parser.add_argument('--scale_workloads_per_feature', action='store_true', help='If we need to scale workload per feature (default is globally)')
 
     # Parse the command-line arguments

@@ -4,9 +4,9 @@ import pickle
 import numpy as np
 from torch.utils.data import Dataset
 
+from src.forecasting.informer.data.custom_max_scaler import CustomMaxScaler
 from src.forecasting.informer.data.custom_std_scaler import CustomStandardScaler
 from src.forecasting.informer.utils.timefeatures import time_encode
-from sklearn.preprocessing import MaxAbsScaler, StandardScaler
 
 
 class WorkloadPredictionDataset(Dataset):
@@ -39,8 +39,10 @@ class WorkloadPredictionDataset(Dataset):
 
         self.workload_scaler = CustomStandardScaler(scale_workloads_per_feature)
 
-        if scaling_type == 'max_abs':
-            self.embedding_scaler = MaxAbsScaler()
+        if scaling_type == 'max':
+            self.embedding_scaler = CustomMaxScaler()
+        elif scaling_type == 'std':
+            self.embedding_scaler = CustomStandardScaler(per_feature=False)
         else:
             self.embedding_scaler = None
 

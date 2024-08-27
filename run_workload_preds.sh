@@ -21,7 +21,7 @@ n_runs=${3:-10}
 # Assign d_model from the fourth command-line argument or use default value of 1024
 d_model=${4:-1024}
 
-addional_params=${5:-""}
+additional_params=${5:-""}
 
 # Define the full directory path
 full_dir="$base_dir/workload_prediction_results_$microservice_id"
@@ -31,13 +31,13 @@ rm -rf "$full_dir"
 mkdir -p "$full_dir"
 
 # Run the workload prediction tasks with different configurations
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_24/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_24/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_60/" "$addional_params"
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_60/" "$addional_params"
-python3 main.py --task predict_workload --d_model 2048 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_with_embedding/" "$addional_params"
-python3 main.py --task predict_workload --d_model 2048 --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_without_embedding/" "$addional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_24/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_24/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_60/" "$additional_params"
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_60/" "$additional_params"
+python3 main.py --task predict_workload --d_model 2048 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_with_embedding/" "$additional_params"
+python3 main.py --task predict_workload --d_model 2048 --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_without_embedding/" "$additional_params"

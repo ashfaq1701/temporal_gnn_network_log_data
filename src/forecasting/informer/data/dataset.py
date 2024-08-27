@@ -26,6 +26,7 @@ class WorkloadPredictionDataset(Dataset):
             label_len,
             pred_len,
             scaling_type,
+            scale_workloads_per_feature,
             use_temporal_embedding=True,
             node_id=None
     ):
@@ -36,12 +37,12 @@ class WorkloadPredictionDataset(Dataset):
         self.label_len = label_len
         self.pred_len = pred_len
 
-        self.workload_scaler = CustomStandardScaler()
+        self.workload_scaler = CustomStandardScaler(scale_workloads_per_feature)
 
-        if scaling_type == 'std':
-            self.embedding_scaler = StandardScaler()
-        else:
+        if scaling_type == 'max_abs':
             self.embedding_scaler = MaxAbsScaler()
+        else:
+            self.embedding_scaler = None
 
         self.use_temporal_embedding = use_temporal_embedding
 
@@ -150,8 +151,11 @@ class WorkloadPredictionDataset(Dataset):
         return self.n_features, self.n_labels
 
     def scale_embeddings(self, embeddings):
+        if self.embedding_scaler is None:
+            return embeddings
+
         n_timesteps, n_nodes, n_features = embeddings.shape
-        reshaped_data = embeddings.reshape(-1)
+        reshaped_data = embeddings.reshape((1, -1))
         scaled_data = self.embedding_scaler.fit_transform(reshaped_data)
         scaled_data_3d = scaled_data.reshape(n_timesteps, n_nodes, n_features)
         return scaled_data_3d

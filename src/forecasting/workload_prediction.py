@@ -126,6 +126,7 @@ class WorkloadTimeSeriesPrediction:
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
+            scaling_type=args.embedding_type,
             use_temporal_embedding=use_temporal_embedding,
             node_id=target_node_id
         )
@@ -143,6 +144,7 @@ class WorkloadTimeSeriesPrediction:
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
+            scaling_type=args.embedding_type,
             use_temporal_embedding=use_temporal_embedding,
             node_id=target_node_id
         )
@@ -160,6 +162,7 @@ class WorkloadTimeSeriesPrediction:
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
+            scaling_type=args.embedding_type,
             use_temporal_embedding=use_temporal_embedding,
             node_id=target_node_id
         )

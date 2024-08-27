@@ -6,7 +6,7 @@ from torch.utils.data import Dataset
 
 from src.forecasting.informer.data.custom_std_scaler import CustomStandardScaler
 from src.forecasting.informer.utils.timefeatures import time_encode
-from sklearn.preprocessing import MaxAbsScaler
+from sklearn.preprocessing import MaxAbsScaler, StandardScaler
 
 
 class WorkloadPredictionDataset(Dataset):
@@ -25,6 +25,7 @@ class WorkloadPredictionDataset(Dataset):
             seq_len,
             label_len,
             pred_len,
+            scaling_type,
             use_temporal_embedding=True,
             node_id=None
     ):
@@ -36,7 +37,11 @@ class WorkloadPredictionDataset(Dataset):
         self.pred_len = pred_len
 
         self.workload_scaler = CustomStandardScaler()
-        self.embedding_scaler = MaxAbsScaler()
+
+        if scaling_type == 'std':
+            self.embedding_scaler = StandardScaler()
+        else:
+            self.embedding_scaler = MaxAbsScaler()
 
         self.use_temporal_embedding = use_temporal_embedding
 
@@ -146,7 +151,7 @@ class WorkloadPredictionDataset(Dataset):
 
     def scale_embeddings(self, embeddings):
         n_timesteps, n_nodes, n_features = embeddings.shape
-        reshaped_data = embeddings.reshape(-1, n_features)
+        reshaped_data = embeddings.reshape(-1)
         scaled_data = self.embedding_scaler.fit_transform(reshaped_data)
         scaled_data_3d = scaled_data.reshape(n_timesteps, n_nodes, n_features)
         return scaled_data_3d

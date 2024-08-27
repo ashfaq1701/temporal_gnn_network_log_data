@@ -7,17 +7,17 @@ class CustomStandardScaler:
         self.std = None
 
     def fit(self, data):
-        self.mean = data.mean(0)
+        self.mean = data.mean()
+        self.std = data.std()
 
-        self.std = data.std(0)
-        self.std[self.std == 0] = 1
-
+        if np.isnan(self.std):
+            self.std = 0
 
     def transform(self, data):
         if self.mean is None:
             raise ValueError('Scaler is not fitted')
 
-        if self.std is not None:
+        if self.std != 0:
             scaled = (data - self.mean) / self.std
         else:
             scaled = data - self.mean

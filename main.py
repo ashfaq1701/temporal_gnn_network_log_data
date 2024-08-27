@@ -427,6 +427,8 @@ if __name__ == "__main__":
     parser.add_argument('--lradj', type=str, default='type1', help='adjust learning rate')
     parser.add_argument('--use_amp', action='store_true', help='use automatic mixed precision training', default=False)
 
+    parser.add_argument('--embedding_type', type=str, default='std', help='Type of embedding scaling, either std or max_abs')
+
     # Parse the command-line arguments
     args = parser.parse_args()
 

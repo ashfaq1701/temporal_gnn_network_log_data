@@ -5,13 +5,13 @@ import numpy as np
 from src.utils import get_test_workloads, get_target_microservice_id, get_train_workloads, get_valid_workloads
 
 
-def plot_microservice_workload(microservice, workloads):
+def plot_microservice_workload(microservice, workloads, save_filepath):
     time_points = range(len(workloads))
-    plt.plot(time_points, workloads, label='Workload')
+    plt.plot(time_points, workloads, label='Workload', color='teal')
 
-    plt.xlabel('Days')
-    plt.ylabel('Workload')
-    plt.title(f'Workloads Over 14 Days - {microservice}')
+    plt.xlabel('Days', fontsize=11, fontweight='bold')
+    plt.ylabel('Workload', fontsize=11, fontweight='bold')
+    plt.title(f'Workloads Over 14 Days - {microservice}', fontsize=12, fontweight='bold')
 
     num_days = 14
     minutes_per_day = 1440
@@ -19,6 +19,11 @@ def plot_microservice_workload(microservice, workloads):
     day_labels = [str(day) for day in days]
 
     plt.xticks(days * minutes_per_day, day_labels)
+
+    plt.legend(loc='upper right', fontsize=10)
+    plt.grid(True, linestyle='--', alpha=0.6)
+
+    plt.savefig(save_filepath, bbox_inches='tight')
     plt.show()
 
 

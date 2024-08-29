@@ -9,6 +9,10 @@ def plot_microservice_workload(microservice, workloads, save_filepath):
     time_points = range(len(workloads))
     plt.plot(time_points, workloads, label='Workload', color='teal')
 
+    mean_workload = np.mean(workloads)
+    # Add mean workload line
+    plt.axhline(y=float(mean_workload), color='orange', linestyle='--', label=f'Mean Workload')
+
     plt.xlabel('Days', fontsize=11, fontweight='bold')
     plt.ylabel('Workload', fontsize=11, fontweight='bold')
     plt.title(f'Workloads Over 14 Days - {microservice}', fontsize=12, fontweight='bold')

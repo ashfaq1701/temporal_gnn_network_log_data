@@ -2,10 +2,11 @@ import numpy as np
 
 
 class CustomStandardScaler:
-    def __init__(self, per_feature):
+    def __init__(self, per_feature, scaling_factor=None):
         self.per_feature = per_feature
         self.mean = None
         self.std = None
+        self.scaling_factor = scaling_factor or 1.0
 
     def fit(self, data):
         if not self.per_feature:
@@ -27,7 +28,7 @@ class CustomStandardScaler:
         else:
             scaled = self._transform_per_feature(data)
 
-        return scaled
+        return scaled * self.scaling_factor
 
     def _transform_per_feature(self, data):
         if self.std is not None:
@@ -53,4 +54,4 @@ class CustomStandardScaler:
         if self.mean is None:
             raise ValueError('Scaler is not fitted')
 
-        return data * self.std + self.mean
+        return (data / self.scaling_factor) * self.std + self.mean

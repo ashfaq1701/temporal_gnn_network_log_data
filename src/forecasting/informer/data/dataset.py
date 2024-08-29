@@ -25,8 +25,9 @@ class WorkloadPredictionDataset(Dataset):
             seq_len,
             label_len,
             pred_len,
-            scaling_type,
+            embedding_scaling_type,
             scale_workloads_per_feature,
+            embedding_scaling_factor=None,
             use_temporal_embedding=True,
             node_id=None
     ):
@@ -39,10 +40,10 @@ class WorkloadPredictionDataset(Dataset):
 
         self.workload_scaler = CustomStandardScaler(scale_workloads_per_feature)
 
-        if scaling_type == 'max':
-            self.embedding_scaler = CustomMaxScaler()
-        elif scaling_type == 'std':
-            self.embedding_scaler = CustomStandardScaler(per_feature=False)
+        if embedding_scaling_type == 'max':
+            self.embedding_scaler = CustomMaxScaler(scaling_factor=embedding_scaling_factor)
+        elif embedding_scaling_type == 'std':
+            self.embedding_scaler = CustomStandardScaler(per_feature=False, scaling_factor=embedding_scaling_factor)
         else:
             self.embedding_scaler = None
 

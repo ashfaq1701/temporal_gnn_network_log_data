@@ -341,6 +341,8 @@ if __name__ == "__main__":
     parser.add_argument('--ignore_temporal_embedding', action='store_true', help='Should we use temporal embedding for workload prediction?')
     parser.add_argument('--only_use_target_microservice', action='store_true', help='Should we use only the target microservice for workload prediction?')
     parser.add_argument('--microservice_id', type=int, help='If needs to be run on a specific microservice')
+    parser.add_argument('--test_microservice_id', type=str, help='If needs to test on a different microservice')
+    parser.add_argument('--should_reverse_data', action='store_true', help='If we should reverse the data')
 
     # TGN Arguments
     parser.add_argument('--link_prediction_bs', type=int, default=2000, help='Link Prediction Batch_size')

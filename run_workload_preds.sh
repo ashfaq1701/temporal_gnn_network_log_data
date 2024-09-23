@@ -5,7 +5,7 @@ export PYTHONUNBUFFERED=1
 
 # Check if microservice_id is passed as a parameter
 if [ -z "$1" ]; then
-  echo "Usage: $0 <microservice_id> [base_dir] [n_runs] [d_model] [embedding_scaling_type] [embedding_scaling_factor]"
+  echo "Usage: $0 <microservice_id> [base_dir] [n_runs] [d_model] [embedding_scaling_type] [embedding_scaling_factor] [test_microservice_id] [should_reverse_data]"
   exit 1
 fi
 
@@ -26,6 +26,13 @@ embedding_scaling_type=${5:-"max"}
 
 embedding_scaling_factor=${6:-1.0}
 
+test_microservice_id=${7:""}
+
+should_reverse_data_flag=""
+if [ "$8" = "true" ]; then
+  should_reverse_data_flag="--should_reverse_data"
+fi
+
 # Define the full directory path
 full_dir="$base_dir/workload_prediction_results_$microservice_id"
 
@@ -34,13 +41,13 @@ rm -rf "$full_dir"
 mkdir -p "$full_dir"
 
 # Run the workload prediction tasks with different configurations
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_24/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_24/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model ${double_d_model} --only_use_target_microservice --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_60/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model ${double_d_model} --only_use_target_microservice --ignore_temporal_embedding --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_60/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model ${double_d_model} --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_with_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
-python3 main.py --task predict_workload --d_model ${double_d_model} --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_without_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 48 --label_len 24 --pred_len 12 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_24/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model $d_model --only_use_target_microservice --ignore_temporal_embedding --seq_len 96 --label_len 48 --pred_len 24 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_24/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model ${double_d_model} --only_use_target_microservice --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_with_embedding_long_range_pred_60/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model ${double_d_model} --only_use_target_microservice --ignore_temporal_embedding --seq_len 240 --label_len 120 --pred_len 60 --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/univariate_without_embedding_long_range_pred_60/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model ${double_d_model} --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_with_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag
+python3 main.py --task predict_workload --d_model ${double_d_model} --ignore_temporal_embedding --microservice_id $microservice_id --patience 5 --n_runs $n_runs --output_dir "$full_dir/multivariate_without_embedding/" --embedding_scaling_type "$embedding_scaling_type" --embedding_scaling_factor $embedding_scaling_factor --test_microservice_id "$test_microservice_id" $should_reverse_data_flag

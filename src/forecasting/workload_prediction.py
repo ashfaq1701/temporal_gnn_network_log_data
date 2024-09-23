@@ -15,18 +15,27 @@ from src.preprocess.functions import get_filtered_nodes_count
 from src.utils import get_target_microservice_id, get_training_validation_and_test_file_indices
 
 
-def predict_workload(args, ignore_temporal_embedding, result_path, only_use_target_microservice):
+def predict_workload(
+        args, ignore_temporal_embedding, result_path, only_use_target_microservice
+):
     if args.microservice_id is None:
         target_microservice_id = get_target_microservice_id()
     else:
         target_microservice_id = args.microservice_id
+
+    if args.test_microservice_id is not None and args.test_microservice_id != '':
+        test_microservice_id = int(args.test_microservice)
+    else:
+        test_microservice_id = target_microservice_id
 
     training_days = args.workload_pred_train_days
     validation_days = args.workload_pred_valid_days
     test_days = args.workload_pred_test_days
 
     (train_start, train_end), (valid_start, valid_end), (test_start, test_end) = \
-        get_training_validation_and_test_file_indices(training_days, validation_days, test_days)
+        get_training_validation_and_test_file_indices(
+            training_days, validation_days, test_days, args.should_reverse_data
+        )
 
     node_count = get_filtered_nodes_count()
     d_embedding = args.memory_dim
@@ -59,7 +68,8 @@ def predict_workload(args, ignore_temporal_embedding, result_path, only_use_targ
             use_temporal_embedding=not ignore_temporal_embedding,
             device=device,
             output_dir=result_path,
-            target_node_id=target_microservice_id if only_use_target_microservice else None
+            target_node_id=target_microservice_id if only_use_target_microservice else None,
+            test_node_id=test_microservice_id if only_use_target_microservice else None
         )
 
         print('>>>>>>>start training {} : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(run, setting))
@@ -107,7 +117,8 @@ class WorkloadTimeSeriesPrediction:
             use_temporal_embedding,
             device,
             output_dir,
-            target_node_id=None
+            target_node_id=None,
+            test_node_id=None,
     ):
         self.args = args
         self.device = device
@@ -170,7 +181,7 @@ class WorkloadTimeSeriesPrediction:
             scale_workloads_per_feature=args.scale_workloads_per_feature,
             embedding_scaling_factor=args.embedding_scaling_factor,
             use_temporal_embedding=use_temporal_embedding,
-            node_id=target_node_id
+            node_id=test_node_id
         )
 
         n_features, n_labels = self.train_ds.get_feature_and_label_count()

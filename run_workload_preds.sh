@@ -26,8 +26,7 @@ embedding_scaling_type=${5:-"max"}
 
 embedding_scaling_factor=${6:-1.0}
 
-test_microservice_id=${7:"none"}
-echo "$test_microservice_id"
+test_microservice_id=${7:""}
 
 should_reverse_data_input=${8:"false"}
 if [ "$should_reverse_data_input" = "true" ]; then

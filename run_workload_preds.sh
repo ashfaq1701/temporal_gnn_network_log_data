@@ -28,9 +28,11 @@ embedding_scaling_factor=${6:-1.0}
 
 test_microservice_id=${7:"none"}
 
-should_reverse_data_flag=""
-if [ "$8" = "true" ]; then
+should_reverse_data_input=${8:"false"}
+if [ "$should_reverse_data_input" = "true" ]; then
   should_reverse_data_flag="--should_reverse_data"
+else
+  should_reverse_data_flag=""
 fi
 
 # Define the full directory path

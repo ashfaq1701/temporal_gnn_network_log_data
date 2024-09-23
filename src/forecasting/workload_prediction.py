@@ -23,7 +23,7 @@ def predict_workload(
     else:
         target_microservice_id = args.microservice_id
 
-    if args.test_microservice_id is not None and args.test_microservice_id != '':
+    if args.test_microservice_id is not None and args.test_microservice_id != 'none':
         test_microservice_id = int(args.test_microservice)
     else:
         test_microservice_id = target_microservice_id

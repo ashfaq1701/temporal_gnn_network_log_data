@@ -101,7 +101,6 @@ def plot_pred_and_true_workloads(
     plt.savefig(save_filepath, bbox_inches='tight')
 
 
-
 def plot_full_workloads(
         filepath, title, save_filepath, take_first=True, microservice_id=None, is_reversed=True, test_microservice=None
 ):

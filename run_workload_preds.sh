@@ -28,7 +28,7 @@ embedding_scaling_factor=${6:-1.0}
 
 test_microservice_id=${7:-"none"}
 
-should_reverse_data_input=${8:"false"}
+should_reverse_data_input=${8:-"false"}
 if [ "$should_reverse_data_input" = "true" ]; then
   should_reverse_data_flag="--should_reverse_data"
 else

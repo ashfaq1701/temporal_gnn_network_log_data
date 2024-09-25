@@ -88,7 +88,7 @@ def get_training_validation_and_test_file_indices(training_days, validation_days
     validation_minutes = int(validation_days * 24 * 60)
     test_minutes = int(test_days * 24 * 60)
 
-    total_minutes = (training_minutes + validation_minutes + test_minutes) * 24 * 60
+    total_minutes = training_minutes + validation_minutes + test_minutes
 
     if not should_reverse_data:
         return (

@@ -121,7 +121,7 @@ def get_workloads_for_specific_microservice(microservice_id):
     return workloads[:, microservice_id]
 
 
-def get_test_workloads(microservice_id=None):
+def get_test_workloads(microservice_id=None, is_reversed=False):
     if microservice_id is None:
         target_microservice_id = get_target_microservice_id()
     else:
@@ -135,13 +135,20 @@ def get_test_workloads(microservice_id=None):
 
     training_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
     validation_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
-    test_start_minute = training_days * 24 * 60 + validation_days * 24 * 60
+    test_days = int(os.getenv('WORKLOAD_PREDICTION_TEST_DAYS'))
 
-    test_workloads_for_target = workloads[test_start_minute:, target_microservice_id]
+    if is_reversed:
+        test_start = 0
+        test_end = test_days * 24 * 60
+    else:
+        test_start = training_days * 24 * 60 + validation_days * 24 * 60
+        test_end = (training_days + validation_days + test_days) * 24 * 60
+
+    test_workloads_for_target = workloads[test_start:test_end, target_microservice_id]
     return test_workloads_for_target
 
 
-def get_valid_workloads(microservice_id=None):
+def get_valid_workloads(microservice_id=None, is_reversed=False):
     if microservice_id is None:
         target_microservice_id = get_target_microservice_id()
     else:
@@ -155,15 +162,20 @@ def get_valid_workloads(microservice_id=None):
 
     training_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
     validation_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
+    test_days = int(os.getenv('WORKLOAD_PREDICTION_TEST_DAYS'))
 
-    valid_start_minute = training_days * 24 * 60
-    test_start_minute = training_days * 24 * 60 + validation_days * 24 * 60
+    if is_reversed:
+        valid_start_minute = test_days * 24 * 60
+        valid_end_minute = (test_days + validation_days) * 24 * 60
+    else:
+        valid_start_minute = training_days * 24 * 60
+        valid_end_minute = training_days * 24 * 60 + validation_days * 24 * 60
 
-    valid_workloads_for_target = workloads[valid_start_minute:test_start_minute, target_microservice_id]
+    valid_workloads_for_target = workloads[valid_start_minute:valid_end_minute, target_microservice_id]
     return valid_workloads_for_target
 
 
-def get_train_workloads(microservice_id=None):
+def get_train_workloads(microservice_id=None, is_reversed=False):
     if microservice_id is None:
         target_microservice_id = get_target_microservice_id()
     else:
@@ -176,8 +188,15 @@ def get_train_workloads(microservice_id=None):
         workloads = np.array(workloads)
 
     training_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
+    validation_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
+    test_days = int(os.getenv('WORKLOAD_PREDICTION_TEST_DAYS'))
 
-    train_end_minute = training_days * 24 * 60
+    if is_reversed:
+        train_start_minute = (test_days + validation_days) * 24 * 60
+        train_end_minute = (test_days + validation_days + training_days) * 24 * 60
+    else:
+        train_start_minute = 0
+        train_end_minute = training_days * 24 * 60
 
-    train_workloads_for_target = workloads[:train_end_minute, target_microservice_id]
+    train_workloads_for_target = workloads[train_start_minute:train_end_minute, target_microservice_id]
     return train_workloads_for_target

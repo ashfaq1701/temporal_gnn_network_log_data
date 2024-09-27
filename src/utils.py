@@ -90,18 +90,23 @@ def get_training_validation_and_test_file_indices(training_days, validation_days
 
     total_minutes = training_minutes + validation_minutes + test_minutes
 
-    if not should_reverse_data:
-        return (
-            (0, training_minutes),
-            (training_minutes, training_minutes + validation_minutes),
-            (training_minutes + validation_minutes, training_minutes + validation_minutes + test_minutes)
-        )
+    if should_reverse_data == 'all' or should_reverse_data == 'train':
+        training_indices = (total_minutes - training_minutes, total_minutes)
+        validation_indices = (total_minutes - training_minutes - validation_minutes, total_minutes - training_minutes)
     else:
-        return (
-            (total_minutes - training_minutes, total_minutes),
-            (total_minutes - training_minutes - validation_minutes, total_minutes - training_minutes),
-            (0, test_minutes)
-        )
+        training_indices = (0, training_minutes)
+        validation_indices = (training_minutes, training_minutes + validation_minutes)
+
+    if should_reverse_data == 'all' or should_reverse_data == 'test':
+        test_indices = (0, test_minutes)
+    else:
+        test_indices = (training_minutes + validation_minutes, training_minutes + validation_minutes + test_minutes)
+
+    return (
+        training_indices,
+        validation_indices,
+        test_indices
+    )
 
 
 def get_target_microservice_id():

@@ -66,7 +66,6 @@ def predict_workload(
             test_start=test_start,
             test_end=test_end,
             node_count=node_count,
-            d_embedding=d_embedding,
             use_temporal_embedding=not ignore_temporal_embedding,
             device=device,
             output_dir=result_path,
@@ -115,7 +114,6 @@ class WorkloadTimeSeriesPrediction:
             test_start,
             test_end,
             node_count,
-            d_embedding,
             use_temporal_embedding,
             device,
             output_dir,
@@ -440,26 +438,26 @@ def build_embedding_scaler(embedding_scaling_type, embedding_scaling_factor):
     return embedding_scaler
 
 
-def get_workloads(start_minute, end_minute, workload_scaler, node_id, n_nodes):
+def get_workloads(start_minute, end_minute, workload_scaler, node_id, node_count):
     embedding_dir = os.getenv('EMBEDDING_DIR')
 
     with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
         workloads = pickle.load(f)
         workloads = np.array(workloads)
 
-    node_ids = [node_id] if node_id is not None else list(range(n_nodes))
+    node_ids = [node_id] if node_id is not None else list(range(node_count))
     selected_workloads = workloads[:, node_ids]
     scaled_workloads = workload_scaler.fit_transform(selected_workloads)
 
     return scaled_workloads[start_minute:end_minute, :]
 
 
-def get_embeddings(start_minute, end_minute, embedding_scaler, node_id, n_nodes):
+def get_embeddings(start_minute, end_minute, embedding_scaler, node_id, node_count):
     def scale_embeddings(embeddings):
         if embedding_scaler is None:
             return embeddings
 
-        n_timesteps, n_features = embeddings.shape
+        n_timesteps, n_nodes, n_features = embeddings.shape
         reshaped_data = embeddings.reshape((1, -1))
         scaled_data = embedding_scaler.fit_transform(reshaped_data)
         scaled_data_3d = scaled_data.reshape(n_timesteps, n_nodes, n_features)
@@ -471,7 +469,7 @@ def get_embeddings(start_minute, end_minute, embedding_scaler, node_id, n_nodes)
         all_embeddings = pickle.load(f)
         all_embeddings = np.array(all_embeddings)
 
-    node_ids = [node_id] if node_id is not None else list(range(n_nodes))
+    node_ids = [node_id] if node_id is not None else list(range(node_count))
     selected_embeddings = all_embeddings[:, node_ids, :]
     scaled_embeddings = scale_embeddings(selected_embeddings)
     return scaled_embeddings[start_minute:end_minute, :, :]

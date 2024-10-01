@@ -129,6 +129,7 @@ class WorkloadTimeSeriesPrediction:
 
         train_workloads = get_workloads(train_start, train_end, workload_scaler, target_node_id, node_count)
         valid_workloads = get_workloads(valid_start, valid_end, workload_scaler, target_node_id, node_count)
+        print(f"VALID WORKLOAD SHAPE: {valid_workloads.shape}")
         test_workloads = get_workloads(test_start, test_end, workload_scaler, test_node_id, node_count)
 
         train_embeddings = None

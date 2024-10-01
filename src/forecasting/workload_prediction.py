@@ -139,6 +139,7 @@ class WorkloadTimeSeriesPrediction:
         if use_temporal_embedding:
             train_embeddings = get_embeddings(train_start, train_end, embedding_scaler, target_node_id, node_count)
             valid_embeddings = get_embeddings(valid_start, valid_end, embedding_scaler, target_node_id, node_count)
+            print(f"VALID EMBEDDING SHAPE: {valid_embeddings.shape}")
             test_embeddings = get_embeddings(test_start, test_end, embedding_scaler, test_node_id, node_count)
 
         self.train_ds = WorkloadPredictionDataset(

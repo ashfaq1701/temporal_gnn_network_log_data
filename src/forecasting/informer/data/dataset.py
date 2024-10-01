@@ -36,17 +36,12 @@ class WorkloadPredictionDataset(Dataset):
         self.n_features = self.n_nodes + self.n_nodes * self.embedding_width
         self.n_labels = self.n_nodes
 
-        self.all_data = np.empty((0, self.n_features), dtype=np.float32)
-        self.all_labels = np.empty((0, self.n_labels), dtype=np.float32)
+        self.data = np.empty((workloads.shape[0], self.n_features), dtype=np.float32)
+        self.labels = np.empty((workloads.shape[0], self.n_labels), dtype=np.float32)
+        timesteps = np.arange(start_minute, end_minute + 1, dtype=np.float32)
+        self.timesteps = time_encode(timesteps)
 
         self._load_data()
-
-        all_timesteps = np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32)
-        self.all_timesteps = time_encode(all_timesteps)
-
-        self.data = self.all_data[start_minute:end_minute, :]
-        self.labels = self.all_labels[start_minute:end_minute, :]
-        self.timesteps = self.all_timesteps[start_minute:end_minute, :]
 
         self._current_idx = 0
 
@@ -54,22 +49,22 @@ class WorkloadPredictionDataset(Dataset):
         self.all_data = np.zeros((len(self.workloads), self.n_features), dtype=np.float32)
         self.all_labels = np.zeros((len(self.workloads), self.n_labels), dtype=np.float32)
 
-        for timestep in range(len(self.workloads)):
+        for timestep in range(self.workloads.shape[0]):
             col_idx_data = 0
             col_idx_labels = 0
 
             for i in range(self.n_nodes):
                 workload = self.workloads[timestep][i]
 
-                self.all_data[timestep, col_idx_data] = workload
+                self.data[timestep, col_idx_data] = workload
                 col_idx_data += 1
 
                 if self.embeddings is not None:
                     embedding = self.embeddings[timestep, i, :]
-                    self.all_data[timestep, col_idx_data:col_idx_data + self.embedding_width] = embedding
+                    self.data[timestep, col_idx_data:col_idx_data + self.embedding_width] = embedding
                     col_idx_data += self.embedding_width
 
-                self.all_labels[timestep, col_idx_labels] = workload
+                self.labels[timestep, col_idx_labels] = workload
                 col_idx_labels += 1
 
     def __getitem__(self, index):

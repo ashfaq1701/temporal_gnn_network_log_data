@@ -40,7 +40,6 @@ def predict_workload(
         )
 
     node_count = get_filtered_nodes_count()
-    d_embedding = args.memory_dim
 
     if torch.cuda.is_available():
         device_string = 'cuda:{}'.format(args.gpu)

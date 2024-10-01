@@ -129,7 +129,6 @@ class WorkloadTimeSeriesPrediction:
 
         train_workloads = get_workloads(train_start, train_end, workload_scaler, target_node_id, node_count)
         valid_workloads = get_workloads(valid_start, valid_end, workload_scaler, target_node_id, node_count)
-        print(f"VALID WORKLOAD SHAPE: {valid_workloads.shape}")
         test_workloads = get_workloads(test_start, test_end, workload_scaler, test_node_id, node_count)
 
         train_embeddings = None
@@ -139,7 +138,6 @@ class WorkloadTimeSeriesPrediction:
         if use_temporal_embedding:
             train_embeddings = get_embeddings(train_start, train_end, embedding_scaler, target_node_id, node_count)
             valid_embeddings = get_embeddings(valid_start, valid_end, embedding_scaler, target_node_id, node_count)
-            print(f"VALID EMBEDDING SHAPE: {valid_embeddings.shape}")
             test_embeddings = get_embeddings(test_start, test_end, embedding_scaler, test_node_id, node_count)
 
         self.train_ds = WorkloadPredictionDataset(
@@ -231,7 +229,7 @@ class WorkloadTimeSeriesPrediction:
 
         if flag == 'train':
             dataset = self.train_ds
-        elif flag == 'valid':
+        elif flag == 'val':
             dataset = self.valid_ds
         else:
             dataset = self.test_ds

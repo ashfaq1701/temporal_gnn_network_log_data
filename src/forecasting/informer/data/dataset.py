@@ -1,11 +1,6 @@
-import os
-import pickle
-
 import numpy as np
 from torch.utils.data import Dataset
 
-from src.forecasting.informer.data.custom_max_scaler import CustomMaxScaler
-from src.forecasting.informer.data.custom_std_scaler import CustomStandardScaler
 from src.forecasting.informer.utils.timefeatures import time_encode
 
 
@@ -13,53 +8,33 @@ class WorkloadPredictionDataset(Dataset):
 
     def __init__(
             self,
-            n_nodes,
-            d_embed,
-            dataset,
-            train_start_minute,
-            train_end_minute,
-            valid_start_minute,
-            valid_end_minute,
-            test_start_minute,
-            test_end_minute,
+            workloads,
+            embeddings,
+            start_minute,
+            end_minute,
             seq_len,
             label_len,
             pred_len,
-            embedding_scaling_type,
-            scale_workloads_per_feature,
-            embedding_scaling_factor=None,
-            use_temporal_embedding=True,
-            node_id=None
+            workload_scaler
     ):
-        self.n_nodes = n_nodes
-        self.node_id = node_id
+        self.n_nodes = workloads.shape[-1]
+
+        self.workloads = workloads
+        self.embeddings = embeddings
 
         self.seq_len = seq_len
         self.label_len = label_len
         self.pred_len = pred_len
 
-        self.workload_scaler = CustomStandardScaler(scale_workloads_per_feature)
+        self.workload_scaler = workload_scaler
 
-        if embedding_scaling_type == 'max':
-            self.embedding_scaler = CustomMaxScaler(scaling_factor=embedding_scaling_factor)
-        elif embedding_scaling_type == 'std':
-            self.embedding_scaler = CustomStandardScaler(per_feature=False, scaling_factor=embedding_scaling_factor)
-        else:
-            self.embedding_scaler = None
-
-        self.use_temporal_embedding = use_temporal_embedding
-
-        if use_temporal_embedding:
-            self.embedding_width = d_embed
+        if embeddings is not None:
+            self.embedding_width = embeddings.shape[-1]
         else:
             self.embedding_width = 0
 
-        if node_id is None:
-            self.n_features = n_nodes + n_nodes * self.embedding_width
-            self.n_labels = n_nodes
-        else:
-            self.n_features = self.embedding_width + 1
-            self.n_labels = 1
+        self.n_features = self.n_nodes + self.n_nodes * self.embedding_width
+        self.n_labels = self.n_nodes
 
         self.all_data = np.empty((0, self.n_features), dtype=np.float32)
         self.all_labels = np.empty((0, self.n_labels), dtype=np.float32)
@@ -69,18 +44,6 @@ class WorkloadPredictionDataset(Dataset):
         all_timesteps = np.arange(1, self.all_data.shape[0] + 1, dtype=np.float32)
         self.all_timesteps = time_encode(all_timesteps)
 
-        if dataset == 'train':
-            start_minute = train_start_minute
-            end_minute = train_end_minute
-        elif dataset == 'valid':
-            start_minute = valid_start_minute
-            end_minute = valid_end_minute
-        elif dataset == 'test':
-            start_minute = test_start_minute
-            end_minute = test_end_minute
-        else:
-            raise ValueError(f'Invalid dataset name {dataset}')
-
         self.data = self.all_data[start_minute:end_minute, :]
         self.labels = self.all_labels[start_minute:end_minute, :]
         self.timesteps = self.all_timesteps[start_minute:end_minute, :]
@@ -88,39 +51,21 @@ class WorkloadPredictionDataset(Dataset):
         self._current_idx = 0
 
     def _load_data(self):
-        embedding_dir = os.getenv('EMBEDDING_DIR')
+        self.all_data = np.zeros((len(self.workloads), self.n_features), dtype=np.float32)
+        self.all_labels = np.zeros((len(self.workloads), self.n_labels), dtype=np.float32)
 
-        with open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), 'rb') as f:
-            embeddings = pickle.load(f)
-            embeddings = np.array(embeddings)
-
-        with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
-            workloads = pickle.load(f)
-            workloads = np.array(workloads)
-
-        node_ids = [self.node_id] if self.node_id is not None else list(range(self.n_nodes))
-
-        embeddings = embeddings[:, node_ids, :]
-        workloads = workloads[:, node_ids]
-
-        scaled_embeddings = self.scale_embeddings(embeddings)
-        scaled_workloads = self.workload_scaler.fit_transform(workloads)
-
-        self.all_data = np.zeros((len(scaled_workloads), self.n_features), dtype=np.float32)
-        self.all_labels = np.zeros((len(scaled_workloads), self.n_labels), dtype=np.float32)
-
-        for timestep in range(len(embeddings)):
+        for timestep in range(len(self.workloads)):
             col_idx_data = 0
             col_idx_labels = 0
 
-            for i in range(len(node_ids)):
-                embedding = scaled_embeddings[timestep, i, :]
-                workload = scaled_workloads[timestep][i]
+            for i in range(self.n_nodes):
+                workload = self.workloads[timestep][i]
 
                 self.all_data[timestep, col_idx_data] = workload
                 col_idx_data += 1
 
-                if self.use_temporal_embedding:
+                if self.embeddings is not None:
+                    embedding = self.embeddings[timestep, i, :]
                     self.all_data[timestep, col_idx_data:col_idx_data + self.embedding_width] = embedding
                     col_idx_data += self.embedding_width
 
@@ -152,13 +97,3 @@ class WorkloadPredictionDataset(Dataset):
 
     def get_feature_and_label_count(self):
         return self.n_features, self.n_labels
-
-    def scale_embeddings(self, embeddings):
-        if self.embedding_scaler is None:
-            return embeddings
-
-        n_timesteps, n_nodes, n_features = embeddings.shape
-        reshaped_data = embeddings.reshape((1, -1))
-        scaled_data = self.embedding_scaler.fit_transform(reshaped_data)
-        scaled_data_3d = scaled_data.reshape(n_timesteps, n_nodes, n_features)
-        return scaled_data_3d

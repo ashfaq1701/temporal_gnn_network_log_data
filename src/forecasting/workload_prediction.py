@@ -7,6 +7,8 @@ import torch
 from torch import optim, nn
 from torch.utils.data import DataLoader
 
+from src.forecasting.informer.data.custom_max_scaler import CustomMaxScaler
+from src.forecasting.informer.data.custom_std_scaler import CustomStandardScaler
 from src.forecasting.informer.data.dataset import WorkloadPredictionDataset
 from src.forecasting.informer.models.model import Informer, InformerStack
 from src.forecasting.informer.utils.metrics import metric
@@ -124,64 +126,53 @@ class WorkloadTimeSeriesPrediction:
         self.device = device
         self.output_dir = output_dir
 
+        workload_scaler = build_workload_scaler(args.scale_workloads_per_feature)
+        embedding_scaler = build_embedding_scaler(args.embedding_scaling_type, args.embedding_scaling_factor)
+
+        train_workloads = get_workloads(train_start, train_end, workload_scaler, target_node_id, node_count)
+        valid_workloads = get_workloads(valid_start, valid_end, workload_scaler, target_node_id, node_count)
+        test_workloads = get_workloads(test_start, test_end, workload_scaler, test_node_id, node_count)
+
+        train_embeddings = None
+        valid_embeddings = None
+        test_embeddings = None
+
+        if use_temporal_embedding:
+            train_embeddings = get_embeddings(train_start, train_end, embedding_scaler, target_node_id, node_count)
+            valid_embeddings = get_embeddings(valid_start, valid_end, embedding_scaler, target_node_id, node_count)
+            test_embeddings = get_embeddings(test_start, test_end, embedding_scaler, test_node_id, node_count)
+
         self.train_ds = WorkloadPredictionDataset(
-            n_nodes=node_count,
-            d_embed=d_embedding,
-            dataset="train",
-            train_start_minute=train_start,
-            train_end_minute=train_end,
-            valid_start_minute=valid_start,
-            valid_end_minute=valid_end,
-            test_start_minute=test_start,
-            test_end_minute=test_end,
+            workloads=train_workloads,
+            embeddings=train_embeddings,
+            start_minute=train_start,
+            end_minute=train_end,
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
-            embedding_scaling_type=args.embedding_scaling_type,
-            scale_workloads_per_feature=args.scale_workloads_per_feature,
-            embedding_scaling_factor=args.embedding_scaling_factor,
-            use_temporal_embedding=use_temporal_embedding,
-            node_id=target_node_id
+            workload_scaler=workload_scaler
         )
 
         self.valid_ds = WorkloadPredictionDataset(
-            n_nodes=node_count,
-            d_embed=d_embedding,
-            dataset="valid",
-            train_start_minute=train_start,
-            train_end_minute=train_end,
-            valid_start_minute=valid_start,
-            valid_end_minute=valid_end,
-            test_start_minute=test_start,
-            test_end_minute=test_end,
+            workloads=valid_workloads,
+            embeddings=valid_embeddings,
+            start_minute=valid_start,
+            end_minute=valid_end,
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
-            embedding_scaling_type=args.embedding_scaling_type,
-            scale_workloads_per_feature=args.scale_workloads_per_feature,
-            embedding_scaling_factor=args.embedding_scaling_factor,
-            use_temporal_embedding=use_temporal_embedding,
-            node_id=target_node_id
+            workload_scaler=workload_scaler
         )
 
         self.test_ds = WorkloadPredictionDataset(
-            n_nodes=node_count,
-            d_embed=d_embedding,
-            dataset="test",
-            train_start_minute=train_start,
-            train_end_minute=train_end,
-            valid_start_minute=valid_start,
-            valid_end_minute=valid_end,
-            test_start_minute=test_start,
-            test_end_minute=test_end,
+            workloads=test_workloads,
+            embeddings=test_embeddings,
+            start_minute=test_start,
+            end_minute=test_end,
             seq_len=args.seq_len,
             label_len=args.label_len,
             pred_len=args.pred_len,
-            embedding_scaling_type=args.embedding_scaling_type,
-            scale_workloads_per_feature=args.scale_workloads_per_feature,
-            embedding_scaling_factor=args.embedding_scaling_factor,
-            use_temporal_embedding=use_temporal_embedding,
-            node_id=test_node_id
+            workload_scaler=workload_scaler
         )
 
         n_features, n_labels = self.train_ds.get_feature_and_label_count()
@@ -432,3 +423,55 @@ class WorkloadTimeSeriesPrediction:
 
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
         return outputs, batch_y
+
+
+def build_workload_scaler(scale_workloads_per_feature):
+    return CustomStandardScaler(scale_workloads_per_feature)
+
+
+def build_embedding_scaler(embedding_scaling_type, embedding_scaling_factor):
+    if embedding_scaling_type == 'max':
+        embedding_scaler = CustomMaxScaler(scaling_factor=embedding_scaling_factor)
+    elif embedding_scaling_type == 'std':
+        embedding_scaler = CustomStandardScaler(per_feature=False, scaling_factor=embedding_scaling_factor)
+    else:
+        embedding_scaler = None
+
+    return embedding_scaler
+
+
+def get_workloads(start_minute, end_minute, workload_scaler, node_id, n_nodes):
+    embedding_dir = os.getenv('EMBEDDING_DIR')
+
+    with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
+        workloads = pickle.load(f)
+        workloads = np.array(workloads)
+
+    node_ids = [node_id] if node_id is not None else list(range(n_nodes))
+    selected_workloads = workloads[:, node_ids]
+    scaled_workloads = workload_scaler.fit_transform(selected_workloads)
+
+    return scaled_workloads[start_minute:end_minute, :]
+
+
+def get_embeddings(start_minute, end_minute, embedding_scaler, node_id, n_nodes):
+    def scale_embeddings(embeddings):
+        if embedding_scaler is None:
+            return embeddings
+
+        n_timesteps, n_features = embeddings.shape
+        reshaped_data = embeddings.reshape((1, -1))
+        scaled_data = embedding_scaler.fit_transform(reshaped_data)
+        scaled_data_3d = scaled_data.reshape(n_timesteps, n_nodes, n_features)
+        return scaled_data_3d
+
+    embedding_dir = os.getenv('EMBEDDING_DIR')
+
+    with open(os.path.join(embedding_dir, 'embeddings_over_time.pickle'), 'rb') as f:
+        all_embeddings = pickle.load(f)
+        all_embeddings = np.array(all_embeddings)
+
+    node_ids = [node_id] if node_id is not None else list(range(n_nodes))
+    selected_embeddings = all_embeddings[:, node_ids, :]
+    scaled_embeddings = scale_embeddings(selected_embeddings)
+    return scaled_embeddings[start_minute:end_minute, :, :]

@@ -126,18 +126,18 @@ class WorkloadTimeSeriesPrediction:
         workload_scaler = build_workload_scaler(args.scale_workloads_per_feature)
         embedding_scaler = build_embedding_scaler(args.embedding_scaling_type, args.embedding_scaling_factor)
 
-        train_workloads = get_workloads(train_start, train_end, workload_scaler, target_node_id, node_count)
-        valid_workloads = get_workloads(valid_start, valid_end, workload_scaler, target_node_id, node_count)
-        test_workloads = get_workloads(test_start, test_end, workload_scaler, test_node_id, node_count)
+        train_workloads = get_scaled_workloads(train_start, train_end, workload_scaler, target_node_id, node_count)
+        valid_workloads = get_scaled_workloads(valid_start, valid_end, workload_scaler, target_node_id, node_count)
+        test_workloads = get_scaled_workloads(test_start, test_end, workload_scaler, test_node_id, node_count)
 
         train_embeddings = None
         valid_embeddings = None
         test_embeddings = None
 
         if use_temporal_embedding:
-            train_embeddings = get_embeddings(train_start, train_end, embedding_scaler, target_node_id, node_count)
-            valid_embeddings = get_embeddings(valid_start, valid_end, embedding_scaler, target_node_id, node_count)
-            test_embeddings = get_embeddings(test_start, test_end, embedding_scaler, test_node_id, node_count)
+            train_embeddings = get_scaled_embeddings(train_start, train_end, embedding_scaler, target_node_id, node_count)
+            valid_embeddings = get_scaled_embeddings(valid_start, valid_end, embedding_scaler, target_node_id, node_count)
+            test_embeddings = get_scaled_embeddings(test_start, test_end, embedding_scaler, test_node_id, node_count)
 
         self.train_ds = WorkloadPredictionDataset(
             workloads=train_workloads,
@@ -437,7 +437,7 @@ def build_embedding_scaler(embedding_scaling_type, embedding_scaling_factor):
     return embedding_scaler
 
 
-def get_workloads(start_minute, end_minute, workload_scaler, node_id, node_count):
+def get_scaled_workloads(start_minute, end_minute, workload_scaler, node_id, node_count):
     embedding_dir = os.getenv('EMBEDDING_DIR')
 
     with open(os.path.join(embedding_dir, 'workloads_over_time.pickle'), 'rb') as f:
@@ -451,7 +451,7 @@ def get_workloads(start_minute, end_minute, workload_scaler, node_id, node_count
     return scaled_workloads[start_minute:end_minute, :]
 
 
-def get_embeddings(start_minute, end_minute, embedding_scaler, node_id, node_count):
+def get_scaled_embeddings(start_minute, end_minute, embedding_scaler, node_id, node_count):
     def scale_embeddings(embeddings):
         if embedding_scaler is None:
             return embeddings

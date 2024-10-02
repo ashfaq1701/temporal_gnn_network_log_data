@@ -256,7 +256,9 @@ class WorkloadTimeSeriesPrediction:
         total_loss = []
 
         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(vali_loader):
-            pred, true = self._process_one_batch(vali_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+            pred, true = process_one_batch(
+                batch_x, batch_y, batch_x_mark, batch_y_mark, self.model, self.args, self.device
+            )
             loss = criterion(pred.detach().cpu(), true.detach().cpu())
             total_loss.append(loss)
 
@@ -296,7 +298,9 @@ class WorkloadTimeSeriesPrediction:
                 iter_count += 1
 
                 model_optim.zero_grad()
-                pred, true = self._process_one_batch(train_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+                pred, true = process_one_batch(
+                    batch_x, batch_y, batch_x_mark, batch_y_mark, self.model, self.args, self.device
+                )
                 loss = criterion(pred, true)
                 train_loss.append(loss.item())
 
@@ -350,8 +354,9 @@ class WorkloadTimeSeriesPrediction:
         trues = []
 
         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(test_loader):
-            pred, true = self._process_one_batch(
-                test_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+            pred, true = process_one_batch(
+                batch_x, batch_y, batch_x_mark, batch_y_mark, self.model, self.args, self.device
+            )
             preds.append(pred.detach().cpu().numpy())
             trues.append(true.detach().cpu().numpy())
 
@@ -380,8 +385,9 @@ class WorkloadTimeSeriesPrediction:
         preds = []
 
         for i, (batch_x, batch_y, batch_x_mark, batch_y_mark) in enumerate(pred_loader):
-            pred, true = self._process_one_batch(
-                pred_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
+            pred, true = process_one_batch(
+                batch_x, batch_y, batch_x_mark, batch_y_mark, self.model, self.args, self.device
+            )
             preds.append(pred.detach().cpu().numpy())
 
         preds = np.array(preds)
@@ -389,7 +395,7 @@ class WorkloadTimeSeriesPrediction:
         preds_inverted = pred_data.inverse_transform(preds)
         return preds_inverted
 
-    def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
+    def _process_one_batch(self, batch_x, batch_y, batch_x_mark, batch_y_mark):
         batch_x = batch_x.float().to(self.device)
         batch_y = batch_y.float()
 
@@ -420,6 +426,39 @@ class WorkloadTimeSeriesPrediction:
 
         batch_y = batch_y[:, -self.args.pred_len:, :].to(self.device)
         return outputs, batch_y
+
+
+def process_one_batch(batch_x, batch_y, batch_x_mark, batch_y_mark, model, args, device):
+    batch_x = batch_x.float().to(device)
+    batch_y = batch_y.float()
+
+    batch_x_mark = batch_x_mark.float().to(device)
+    batch_y_mark = batch_y_mark.float().to(device)
+
+    # decoder input
+    if args.padding == 0:
+        dec_inp = torch.zeros([batch_y.shape[0], args.pred_len, batch_y.shape[-1]]).float()
+    elif args.padding == 1:
+        dec_inp = torch.ones([batch_y.shape[0], args.pred_len, batch_y.shape[-1]]).float()
+    else:
+        raise ValueError("Invalid padding value.")
+
+    dec_inp = torch.cat([batch_y[:, :args.label_len, :], dec_inp], dim=1).float().to(device)
+    # encoder - decoder
+    if args.use_amp:
+        with torch.cuda.amp.autocast():
+            if args.output_attention:
+                outputs = model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+            else:
+                outputs = model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+    else:
+        if args.output_attention:
+            outputs = model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+        else:
+            outputs = model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+
+    batch_y = batch_y[:, -args.pred_len:, :].to(device)
+    return outputs, batch_y
 
 
 def build_workload_scaler(scale_workloads_per_feature):

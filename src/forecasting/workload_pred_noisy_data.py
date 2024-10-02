@@ -44,7 +44,7 @@ def test_workload_pred_noisy_data(args):
         0 if not args.use_temporal_embedding else test_embeddings.shape[-1],
         device,
         args
-    )
+    ).to(device)
 
     for seed in args.seeds:
         path_for_seed = os.path.join(args.output_dir, f'seed_{seed}')

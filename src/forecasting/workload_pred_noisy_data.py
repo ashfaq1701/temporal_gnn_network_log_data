@@ -184,8 +184,10 @@ def build_model(model_path, n_nodes, embedding_width, device, args):
     ).float()
 
     if device.type == 'cuda':
+        print('CUDA is available')
         model.load_state_dict(torch.load(model_path))
     else:
+        print('CUDA is NOT available')
         model.load_state_dict(torch.load(model_path, map_location=torch.device('cpu')))
 
     return model

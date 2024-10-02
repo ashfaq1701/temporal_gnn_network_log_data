@@ -27,6 +27,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--scale_workloads_per_feature', action='store_true', help='If we need to scale workload per feature (default is globally)')
 
+    parser.add_argument('--gpu', type=int, default=0, help='Idx for the gpu to use')
     parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
     parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
     parser.add_argument('--padding', type=int, default=0, help='padding type')

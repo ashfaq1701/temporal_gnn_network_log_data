@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument('--total_days', type=int, default=14, help='Total days in workload prediction')
     parser.add_argument('--reverse_test_data', action='store_true', help='Should we reverse the test data.')
     parser.add_argument('--num_noisy_iters', type=int, default=11, help='Number of noisy runs.')
-    parser.add_argument('--seeds', type=int, nargs='+', default=[42], help='List of seeds for the noise generator (default: [42]).')
+    parser.add_argument('--seeds', type=str, default='42', help='Comma separated list of seeds for the noise generator (default: 42).')
 
     parser.add_argument('--seq_len', type=int, default=12, help='Number of past timesteps to predict from.')
     parser.add_argument('--label_len', type=int, default=6, help='Number of future timesteps to predict')

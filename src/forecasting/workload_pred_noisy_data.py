@@ -46,7 +46,9 @@ def test_workload_pred_noisy_data(args):
         args
     ).to(device)
 
-    for seed in args.seeds:
+    seeds_arr = [int(seed) for seed in args.seeds.split(',')]
+
+    for seed in seeds_arr:
         path_for_seed = os.path.join(args.output_dir, f'seed_{seed}')
 
         noisy_data_versions = get_noisy_test_versions(

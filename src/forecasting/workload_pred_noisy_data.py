@@ -79,6 +79,7 @@ def test_workload_pred_noisy_data(args):
 
 
 def get_noisy_test_versions(data, num_noisy_iters, start_modulation_factor, end_modulation_factor, seed):
+    np.random.seed(seed)
     max_value = np.max(data)
     random_noise = np.random.normal(0, 1, len(data))
     shifted_noise = random_noise - np.min(random_noise)

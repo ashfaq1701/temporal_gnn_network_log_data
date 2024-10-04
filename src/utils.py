@@ -1,5 +1,6 @@
 import pickle
 import tarfile
+from pathlib import Path
 
 import requests
 from retrying import retry
@@ -59,6 +60,10 @@ def get_files_in_directory_with_ext(directory, extension):
     files = os.listdir(directory)
     pickle_files = [file for file in files if file.endswith(extension)]
     return pickle_files
+
+
+def list_folders_in_directory(directory_path):
+    return [f.name for f in Path(directory_path).iterdir() if f.is_dir()]
 
 
 def combine_means_and_stds(means, stds, sizes):

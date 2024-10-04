@@ -31,7 +31,7 @@ def plot_microservice_workload(microservice, workloads, save_filepath):
     plt.show()
 
 
-def get_pred_and_true_workloads(filepath, take_first=True, microservice_id=None, is_reversed=False):
+def get_pred_and_true_workloads_from_file(filepath, take_first=True, microservice_id=None, is_reversed=False):
     test_workloads = get_test_workloads(microservice_id, is_reversed)
 
     if microservice_id is not None:
@@ -40,6 +40,10 @@ def get_pred_and_true_workloads(filepath, take_first=True, microservice_id=None,
         target_microservice_id = get_target_microservice_id()
 
     preds = np.load(filepath)
+
+    print(preds.shape)
+    print(test_workloads.shape)
+
     pred_len = preds.shape[0] + preds.shape[1] - 1
     selected_test_workloads = test_workloads[-pred_len:]
 
@@ -66,10 +70,28 @@ def get_pred_and_true_workloads(filepath, take_first=True, microservice_id=None,
     return pred_workloads, selected_test_workloads
 
 
+def get_pred_and_true_workloads(preds, trues, microservice_id=None):
+    if microservice_id is None:
+        selected_preds = preds[:, :, 0]
+        selected_trues = trues[:, :, 0]
+    else:
+        selected_preds = preds[:, :, microservice_id]
+        selected_trues = trues[:, :, microservice_id]
+
+    one_d_preds = selected_preds[0]
+    one_d_trues = selected_trues[0]
+
+    for t in range(1, selected_preds.shape[0]):
+        one_d_preds = np.append(one_d_preds, selected_preds[t, -1])
+        one_d_trues = np.append(one_d_trues, selected_trues[t, -1])
+
+    return one_d_preds, one_d_trues
+
+
 def plot_pred_and_true_workloads(
         filepath, title, save_filepath, take_first=True, microservice_id=None, is_reversed=False
 ):
-    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first, microservice_id, is_reversed)
+    pred_workloads, true_workloads = get_pred_and_true_workloads_from_file(filepath, take_first, microservice_id, is_reversed)
 
     train_days = int(os.getenv('WORKLOAD_PREDICTION_TRAINING_DAYS'))
     valid_days = int(os.getenv('WORKLOAD_PREDICTION_VALIDATION_DAYS'))
@@ -109,7 +131,7 @@ def plot_full_workloads(
     else:
         test_microservice_id = microservice_id
 
-    pred_workloads, true_workloads = get_pred_and_true_workloads(filepath, take_first, microservice_id, is_reversed)
+    pred_workloads, true_workloads = get_pred_and_true_workloads_from_file(filepath, take_first, microservice_id, is_reversed)
     train_workloads = get_train_workloads(microservice_id, is_reversed)
     valid_workloads = get_valid_workloads(microservice_id, is_reversed)
     test_workloads = get_test_workloads(test_microservice_id, is_reversed)

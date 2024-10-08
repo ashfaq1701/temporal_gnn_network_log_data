@@ -153,9 +153,9 @@ def predict_workloads(model, test_ds, device, args):
     preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
     trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
 
-    mae, mse, rmse, mape, mspe = metric(preds, trues)
+    accuracy, mae, mse, rmse, mape, mspe = metric(preds, trues)
 
-    return np.array([mae, mse, rmse, mape, mspe]), preds, trues
+    return np.array([accuracy, mae, mse, rmse, mape, mspe]), preds, trues
 
 
 def build_model(model_path, n_nodes, embedding_width, device, args):

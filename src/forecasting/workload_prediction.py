@@ -367,10 +367,10 @@ class WorkloadTimeSeriesPrediction:
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
-        mae, mse, rmse, mape, mspe = metric(preds, trues)
-        print('mse:{}, mae:{}'.format(mse, mae))
+        accuracy, mae, mse, rmse, mape, mspe = metric(preds, trues)
+        print('accuracy: {}, mse:{}, mae:{}'.format(accuracy, mse, mae))
 
-        return np.array([mae, mse, rmse, mape, mspe]), preds, trues
+        return np.array([accuracy, mae, mse, rmse, mape, mspe]), preds, trues
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')

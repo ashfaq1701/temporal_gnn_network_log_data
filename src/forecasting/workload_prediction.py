@@ -30,6 +30,14 @@ def predict_workload(
     else:
         test_microservice_id = target_microservice_id
 
+    reversed_str = "_reversed" if args.should_reverse_data else ""
+    output_base_path = f"{result_path}/workload_prediction_results_train_{target_microservice_id}_test_{test_microservice_id}{reversed_str}"
+
+    output_folder_name = "univariate" if only_use_target_microservice else "multivariate_"
+    output_folder_name = f"{output_folder_name}_{'without' if ignore_temporal_embedding else 'with'}_embedding"
+    output_folder_name = f"{output_folder_name}_past_{args.seq_len}_future_{args.pred_len}"
+    output_full_path = os.path.join(output_base_path, output_folder_name)
+
     training_days = args.workload_pred_train_days
     validation_days = args.workload_pred_valid_days
     test_days = args.workload_pred_test_days
@@ -67,7 +75,7 @@ def predict_workload(
             node_count=node_count,
             use_temporal_embedding=not ignore_temporal_embedding,
             device=device,
-            output_dir=result_path,
+            output_dir=output_full_path,
             target_node_id=target_microservice_id if only_use_target_microservice else None,
             test_node_id=test_microservice_id if only_use_target_microservice else None
         )
@@ -89,7 +97,7 @@ def predict_workload(
 
     print(f'Best Run {min_idx}. MAE: {metrics[0]}, MSE: {metrics[1]}, RMSE: {metrics[2]}, MAPE: {metrics[3]}, MSPE: {metrics[4]}')
 
-    folder_path = os.path.join(result_path, 'results/', setting)
+    folder_path = os.path.join(output_full_path, 'results/', setting)
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
 

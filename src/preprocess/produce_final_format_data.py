@@ -5,6 +5,8 @@ import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
+from src.preprocess.custom_label_encoder import CustomLabelEncoder
+
 _encoded_rpc_types = {}
 _encoded_services = {}
 
@@ -78,7 +80,7 @@ def get_encoded_service(service, service_encoder):
 
 
 def get_label_encoder(nodes):
-    label_encoder = LabelEncoder()
+    label_encoder = CustomLabelEncoder()
     label_encoder.fit(nodes)
     return label_encoder
 

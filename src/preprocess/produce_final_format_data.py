@@ -1,8 +1,8 @@
 import os
 import pickle
 
+import numpy as np
 import pandas as pd
-from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 
 from src.preprocess.custom_label_encoder import CustomLabelEncoder
@@ -87,7 +87,7 @@ def get_label_encoder(nodes):
 
 def get_nodes_one_hot_encoder(label_encoder):
     one_hot_encoder = OneHotEncoder(sparse_output=False, handle_unknown='ignore')
-    one_hot_encoder.fit(label_encoder.classes_.reshape(-1, 1))
+    one_hot_encoder.fit(np.array(label_encoder.classes_).reshape(-1, 1))
     return one_hot_encoder
 
 
